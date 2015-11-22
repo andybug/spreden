@@ -1,5 +1,7 @@
 # set up compiler
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11 -g -Wall -Wextra -pedantic")
+add_definitions("-DSPREDEN_VERSION_MAJOR=${SPREDEN_VERSION_MAJOR}")
+add_definitions("-DSPREDEN_VERSION_MINOR=${SPREDEN_VERSION_MINOR}")
 
 add_executable(
   spreden
