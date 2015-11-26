@@ -1,0 +1,7 @@
+#ifndef SPREDEN_H
+#define SPREDEN_H
+
+#define SPREDEN_VERSION_MAJOR 0
+#define SPREDEN_VERSION_MINOR 1
+
+#endif
