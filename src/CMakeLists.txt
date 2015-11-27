@@ -3,6 +3,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11 -g -Wall -Wextra -pedantic")
 
 add_executable(
   spreden
+  list.c
   main.c
 )
 
