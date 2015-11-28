@@ -9,6 +9,8 @@
 
 struct spreden_state {
 	bool verbose;
+	struct list script_dirs;
+	struct list data_dirs;
 };
 
 #endif
