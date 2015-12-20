@@ -50,7 +50,13 @@ int main(int argc, char **argv)
 		{ NULL, 0, 0, 0 }
 	};
 
-	init_state(&state);
+	/* display usage if no arguments provided */
+	if (argc < 2) {
+		display_usage();
+		return EXIT_FAILURE;
+	}
+
+	init_state(&state;
 
 	while ((c = getopt_long(argc, argv, "", options, &index)) != -1) {
 		switch (c) {
