@@ -13,7 +13,7 @@ void list_init(struct list *l)
 	l->tail = NULL;
 }
 
-void list_add(struct list *l, void *data)
+void list_add_front(struct list *l, void *data)
 {
 	struct list_node *node;
 
@@ -21,7 +21,33 @@ void list_add(struct list *l, void *data)
 
 	node = malloc(sizeof(struct list_node));
 	if (!node) {
-		perror("list_add");
+		perror("list_add_front");
+		exit(EXIT_FAILURE);
+	}
+
+	node->data = data;
+	node->next = l->head;
+	node->prev = NULL;
+
+	if (!l->tail)
+		l->tail = node;
+
+	if (l->head)
+		l->head->prev = node;
+
+	l->head = node;
+	l->length++;
+}
+
+void list_add_back(struct list *l, void *data)
+{
+	struct list_node *node;
+
+	assert(l != NULL);
+
+	node = malloc(sizeof(struct list_node));
+	if (!node) {
+		perror("list_add_back");
 		exit(EXIT_FAILURE);
 	}
 

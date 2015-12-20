@@ -34,6 +34,7 @@ static void init_state(struct spreden_state *state)
 {
 	state->verbose = false;
 	list_init(&state->script_dirs);
+	list_add_front(&state->script_dirs, SPREDEN_DEFAULT_SCRIPT_DIR);
 	list_init(&state->data_dirs);
 }
 
@@ -56,7 +57,7 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	init_state(&state;
+	init_state(&state);
 
 	while ((c = getopt_long(argc, argv, "", options, &index)) != -1) {
 		switch (c) {
@@ -64,7 +65,7 @@ int main(int argc, char **argv)
 			usage = true;
 			break;
 		case SPREDEN_OPTION_SCRIPTS:
-			list_add(&state.script_dirs, optarg);
+			list_add_front(&state.script_dirs, optarg);
 			break;
 		case SPREDEN_OPTION_VERBOSE:
 			state.verbose = true;

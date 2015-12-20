@@ -21,7 +21,8 @@ struct list_iter {
 };
 
 extern void list_init(struct list *l);
-extern void list_add(struct list *l, void *data);
+extern void list_add_front(struct list *l, void *data);
+extern void list_add_back(struct list *l, void *data);
 extern void list_clear(struct list *l);
 extern void list_iter_begin(struct list *l, struct list_iter *iter);
 extern bool list_iter_end(struct list_iter *iter);
