@@ -1,0 +1,3 @@
+[submodule "contrib/jsmn"]
+	path = contrib/jsmn
+	url = https://github.com/zserge/jsmn.git
