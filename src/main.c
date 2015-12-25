@@ -30,19 +30,9 @@ static void display_usage(void)
 	fputs(usage, stdout);
 }
 
-static void init_state(struct spreden_state *state)
-{
-	state->verbose = false;
-	list_init(&state->script_dirs);
-	list_add_front(&state->script_dirs, SPREDEN_DEFAULT_SCRIPT_DIR);
-	list_init(&state->data_dirs);
-}
-
-int main(int argc, char **argv)
+static void handle_args(int argc, char **argv, struct spreden_state *state)
 {
 	int c, index;
-	struct spreden_state state;
-	bool version = false, usage = false;
 	static const struct option options[] = {
 		{ "help",    no_argument,       NULL, SPREDEN_OPTION_HELP },
 		{ "scripts", required_argument, NULL, SPREDEN_OPTION_SCRIPTS },
@@ -51,6 +41,37 @@ int main(int argc, char **argv)
 		{ NULL, 0, 0, 0 }
 	};
 
+	while ((c = getopt_long(argc, argv, "", options, &index)) != -1) {
+		switch (c) {
+		case SPREDEN_OPTION_HELP:
+			state->action = SPREDEN_ACTION_USAGE;
+			break;
+		case SPREDEN_OPTION_SCRIPTS:
+			list_add_front(&state->script_dirs, optarg);
+			break;
+		case SPREDEN_OPTION_VERBOSE:
+			state->verbose = true;
+			break;
+		case SPREDEN_OPTION_VERSION:
+			state->action = SPREDEN_ACTION_VERSION;
+			break;
+		}
+	}
+}
+
+static void init_state(struct spreden_state *state)
+{
+	state->verbose = false;
+	state->action = SPREDEN_ACTION_USAGE;
+	list_init(&state->script_dirs);
+	list_add_front(&state->script_dirs, SPREDEN_DEFAULT_SCRIPT_DIR);
+	list_init(&state->data_dirs);
+}
+
+int main(int argc, char **argv)
+{
+	struct spreden_state state;
+
 	/* display usage if no arguments provided */
 	if (argc < 2) {
 		display_usage();
@@ -58,37 +79,19 @@ int main(int argc, char **argv)
 	}
 
 	init_state(&state);
+	handle_args(argc, argv, &state);
 
-	while ((c = getopt_long(argc, argv, "", options, &index)) != -1) {
-		switch (c) {
-		case SPREDEN_OPTION_HELP:
-			usage = true;
-			break;
-		case SPREDEN_OPTION_SCRIPTS:
-			list_add_front(&state.script_dirs, optarg);
-			break;
-		case SPREDEN_OPTION_VERBOSE:
-			state.verbose = true;
-			break;
-		case SPREDEN_OPTION_VERSION:
-			version = true;
-			break;
-		}
-	}
-
-	if (version) {
-		display_version();
-		return EXIT_SUCCESS;
-	} else if (usage) {
+	switch (state.action) {
+	case SPREDEN_ACTION_USAGE:
 		display_usage();
-		return EXIT_SUCCESS;
-	}
-
-	struct list_iter iter;
-	list_iter_begin(&state.script_dirs, &iter);
-	while (!list_iter_end(&iter)) {
-		printf("%s\n", (char *)list_iter_data(&iter));
-		list_iter_next(&iter);
+		break;
+	case SPREDEN_ACTION_VERSION:
+		display_version();
+		break;
+	case SPREDEN_ACTION_RANK:
+	case SPREDEN_ACTION_PREDICT:
+		puts("rank/predict actions not yet implemented");
+		break;
 	}
 
 	return EXIT_SUCCESS;
