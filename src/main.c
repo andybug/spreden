@@ -7,6 +7,8 @@
 
 enum spreden_options {
 	SPREDEN_OPTION_HELP,
+	SPREDEN_OPTION_PREDICT,
+	SPREDEN_OPTION_RANK,
 	SPREDEN_OPTION_SCRIPTS,
 	SPREDEN_OPTION_VERBOSE,
 	SPREDEN_OPTION_VERSION
@@ -24,6 +26,8 @@ static void display_usage(void)
 	static const char usage[] =
 		"spreden is a work in progress. Current options:\n"
 		"--help\n"
+		"--predict\n"
+		"--rank\n"
 		"--scripts\n"
 		"--verbose\n"
 		"--version\n";
@@ -35,6 +39,8 @@ static void handle_args(int argc, char **argv, struct spreden_state *state)
 	int c, index;
 	static const struct option options[] = {
 		{ "help",    no_argument,       NULL, SPREDEN_OPTION_HELP },
+		{ "predict", required_argument, NULL, SPREDEN_OPTION_PREDICT },
+		{ "rank",    required_argument, NULL, SPREDEN_OPTION_RANK },
 		{ "scripts", required_argument, NULL, SPREDEN_OPTION_SCRIPTS },
 		{ "verbose", no_argument,       NULL, SPREDEN_OPTION_VERBOSE },
 		{ "version", no_argument,       NULL, SPREDEN_OPTION_VERSION },
@@ -45,6 +51,12 @@ static void handle_args(int argc, char **argv, struct spreden_state *state)
 		switch (c) {
 		case SPREDEN_OPTION_HELP:
 			state->action = SPREDEN_ACTION_USAGE;
+			break;
+		case SPREDEN_OPTION_PREDICT:
+			state->action = SPREDEN_ACTION_PREDICT;
+			break;
+		case SPREDEN_OPTION_RANK:
+			state->action = SPREDEN_ACTION_RANK;
 			break;
 		case SPREDEN_OPTION_SCRIPTS:
 			list_add_front(&state->script_dirs, optarg);
