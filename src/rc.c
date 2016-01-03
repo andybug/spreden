@@ -80,6 +80,54 @@ static int parse_dates(const char *rc_dates_,
 	return 0;
 }
 
+static void print_rc(struct spreden_state *state)
+{
+	const char *action = "default";
+
+	/* heading */
+	fputs("***** Run Control *****\n", stderr);
+
+	/* print action */
+	switch (state->rc.action) {
+	case SPREDEN_ACTION_PREDICT:
+		action = "predict";
+		break;
+	case SPREDEN_ACTION_RANK:
+		action = "rank";
+		break;
+	default:
+		break;
+	}
+	fprintf(stderr, "action: %s\n", action);
+
+	/* print sport */
+	fprintf(stderr, "sport:  %s\n", state->rc.sport);
+
+	/* print beginning round */
+	if (state->rc.data_begin.round == SPREDEN_ROUND_ALL) {
+		fprintf(stderr, "begin:  %d\n",
+			state->rc.data_begin.year);
+	} else {
+		fprintf(stderr, "begin:  %d round %d\n",
+			state->rc.data_begin.year,
+			state->rc.data_begin.round);
+	}
+
+	/* print ending round */
+	if (state->rc.data_end.round == SPREDEN_ROUND_ALL) {
+		fprintf(stderr, "end:    %d\n",
+			state->rc.data_end.year);
+	} else {
+		fprintf(stderr, "end:    %d round %d\n",
+			state->rc.data_end.year,
+			state->rc.data_end.round);
+	}
+	//fprintf(stderr, "algos: %s\n", algos);
+
+	/* footer */
+	fputs("***********************\n", stderr);
+}
+
 int rc_parse(struct spreden_state *state, const char *rc_)
 {
 	static const char *delim = ":";
@@ -106,30 +154,10 @@ int rc_parse(struct spreden_state *state, const char *rc_)
 	state->rc.sport = strdup(sport);
 	state->rc.data_begin = begin_date;
 	state->rc.data_end = end_date;
-	/* FIXME: action_round? */
+	/* action_round will be set by --predict or --rank */
 
-	if (state->verbose) {
-		fputs("***** Run Control *****\n", stderr);
-		fprintf(stderr, "sport: %s\n", state->rc.sport);
-		if (state->rc.data_begin.round == SPREDEN_ROUND_ALL) {
-			fprintf(stderr, "begin: %d\n",
-				state->rc.data_begin.year);
-		} else {
-			fprintf(stderr, "begin: %d round %d\n",
-				state->rc.data_begin.year,
-				state->rc.data_begin.round);
-		}
-		if (state->rc.data_end.round == SPREDEN_ROUND_ALL) {
-			fprintf(stderr, "end:   %d\n",
-				state->rc.data_end.year);
-		} else {
-			fprintf(stderr, "end:   %d round %d\n",
-				state->rc.data_end.year,
-				state->rc.data_end.round);
-		}
-		fprintf(stderr, "algos: %s\n", algos);
-		fputs("***********************\n", stderr);
-	}
+	if (state->verbose)
+		print_rc(state);
 
 	return 0;
 }

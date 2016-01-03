@@ -77,7 +77,8 @@ static void handle_args(int argc, char **argv, struct spreden_state *state)
 		exit(EXIT_FAILURE);
 	}
 
-	rc_parse(state, argv[optind]);
+	if (rc_parse(state, argv[optind]) < 0)
+		exit(EXIT_FAILURE);
 }
 
 static void init_state(struct spreden_state *state)
