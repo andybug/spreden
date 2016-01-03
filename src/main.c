@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
+
 #include <getopt.h>
 
 #include "spreden.h"
@@ -50,13 +52,13 @@ static void handle_args(int argc, char **argv, struct spreden_state *state)
 	while ((c = getopt_long(argc, argv, "", options, &index)) != -1) {
 		switch (c) {
 		case SPREDEN_OPTION_HELP:
-			state->action = SPREDEN_ACTION_USAGE;
+			state->rc.action = SPREDEN_ACTION_USAGE;
 			break;
 		case SPREDEN_OPTION_PREDICT:
-			state->action = SPREDEN_ACTION_PREDICT;
+			state->rc.action = SPREDEN_ACTION_PREDICT;
 			break;
 		case SPREDEN_OPTION_RANK:
-			state->action = SPREDEN_ACTION_RANK;
+			state->rc.action = SPREDEN_ACTION_RANK;
 			break;
 		case SPREDEN_OPTION_SCRIPTS:
 			list_add_front(&state->script_dirs, optarg);
@@ -65,16 +67,23 @@ static void handle_args(int argc, char **argv, struct spreden_state *state)
 			state->verbose = true;
 			break;
 		case SPREDEN_OPTION_VERSION:
-			state->action = SPREDEN_ACTION_VERSION;
+			state->rc.action = SPREDEN_ACTION_VERSION;
 			break;
 		}
 	}
+
+	if (optind >= argc) {
+		fprintf(stderr, "%s: requires a run control string\n", argv[0]);
+		exit(EXIT_FAILURE);
+	}
+
+	rc_parse(state, argv[optind]);
 }
 
 static void init_state(struct spreden_state *state)
 {
 	state->verbose = false;
-	state->action = SPREDEN_ACTION_USAGE;
+	state->rc.action = SPREDEN_ACTION_USAGE;
 	list_init(&state->script_dirs);
 	list_add_front(&state->script_dirs, SPREDEN_DEFAULT_SCRIPT_DIR);
 	list_init(&state->data_dirs);
@@ -93,7 +102,7 @@ int main(int argc, char **argv)
 	init_state(&state);
 	handle_args(argc, argv, &state);
 
-	switch (state.action) {
+	switch (state.rc.action) {
 	case SPREDEN_ACTION_USAGE:
 		display_usage();
 		break;
