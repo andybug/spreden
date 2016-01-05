@@ -31,6 +31,7 @@ struct spreden_rc {
 	struct spreden_round data_begin;
 	struct spreden_round data_end;
 	struct spreden_round action_round;
+	struct list algorithms;
 };
 
 struct spreden_state {

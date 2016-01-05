@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <alloca.h>
+#include <stdbool.h>
 
 #include "spreden.h"
 
@@ -122,10 +123,51 @@ static void print_rc(struct spreden_state *state)
 			state->rc.data_end.year,
 			state->rc.data_end.round);
 	}
-	//fprintf(stderr, "algos: %s\n", algos);
+
+	/* print algos */
+	fputs("algos:  [ ", stderr);
+	struct list_iter iter;
+	char *algo;
+	list_iter_begin(&state->rc.algorithms, &iter);
+	while (!list_iter_end(&iter)) {
+		algo = list_iter_data(&iter);
+		fprintf(stderr, "%s ", algo);
+		list_iter_next(&iter);
+	}
+	fputs("]\n", stderr);
 
 	/* footer */
 	fputs("***********************\n", stderr);
+}
+
+static int parse_algorithms(const char *algos_, struct list *list)
+{
+	static const char *delim = ",";
+	size_t len;
+	char *saveptr;
+	char *algos;
+	char *a;
+	int i = 0;
+
+	len = strlen(algos_);
+	algos = alloca(len + 1);
+	strcpy(algos, algos_);
+
+	a = strtok_r(algos, delim, &saveptr);
+
+	while (a) {
+		list_add_back(list, strdup(a));
+		a = strtok_r(NULL, delim, &saveptr);
+		i++;
+	}
+
+	if (i == 0) {
+		fprintf(stderr, "%s: no algorithms provided in run control\n",
+			__func__ /*FIXME */);
+		return -1;
+	}
+
+	return 0;
 }
 
 int rc_parse(struct spreden_state *state, const char *rc_)
@@ -135,8 +177,11 @@ int rc_parse(struct spreden_state *state, const char *rc_)
 	char *rc;
 	char *sport, *dates, *algos;
 	char *saveptr;
+	struct list algorithm_list;
 	struct spreden_round begin_date, end_date;
 	int err;
+
+	list_init(&algorithm_list);
 
 	len = strlen(rc_);
 	rc = alloca(len + 1);
@@ -150,11 +195,16 @@ int rc_parse(struct spreden_state *state, const char *rc_)
 	if (err)
 		return -1;
 
+	err = parse_algorithms(algos, &algorithm_list);
+	if (err)
+		return -2;
+
 	/* update rc */
 	state->rc.sport = strdup(sport);
 	state->rc.data_begin = begin_date;
 	state->rc.data_end = end_date;
 	/* action_round will be set by --predict or --rank */
+	state->rc.algorithms = algorithm_list;
 
 	if (state->verbose)
 		print_rc(state);
