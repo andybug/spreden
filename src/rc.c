@@ -27,6 +27,8 @@ static int parse_date_range(struct rc *rc,
 			    struct week_id *end);
 static int parse_control_string(struct rc *rc, const char *cs);
 static int parse_algorithms(struct rc *rc, const char *algos, struct list *list);
+static int update_data_range(struct rc *rc);
+static bool validate_rc(const struct rc *rc);
 static void print_rc(struct rc *rc);
 
 void rc_init(struct rc *rc)
@@ -150,6 +152,15 @@ static int parse_control_string(struct rc *rc, const char *cs)
 	rc->data_begin = begin_date;
 	rc->data_end = end_date;
 	rc->user_algorithms = algorithm_list;
+
+	/* do date range substitutions */
+	err = update_data_range(rc);
+	if (err)
+		return -3;
+
+	/* make sure it is valid */
+	if (!validate_rc(rc))
+		return -4;
 
 	if (rc->verbose)
 		print_rc(rc);
@@ -276,6 +287,39 @@ static int parse_algorithms(struct rc *rc, const char *algos, struct list *list)
 	return 0;
 }
 
+static int update_data_range(struct rc *rc)
+{
+	if (rc->data_begin.week == WEEK_ID_ALL)
+		rc->data_begin.week = 1;
+
+	if (rc->data_end.year == rc->action_week.year &&
+	    rc->data_end.week == WEEK_ID_ALL) {
+		rc->data_end.week = rc->action_week.week;
+	}
+
+	return 0;
+}
+
+static bool validate_rc(const struct rc *rc)
+{
+	if (rc->data_begin.year > rc->data_end.year) {
+		fprintf(stderr, "%s: begin date is after end date\n", rc->name);
+		return false;
+	} else if (rc->data_begin.year == rc->data_end.year &&
+		   rc->data_begin.week > rc->data_end.week) {
+		fprintf(stderr, "%s: begin date is after end date\n", rc->name);
+		return false;
+	} else if ((rc->data_end.year == rc->action_week.year &&
+		    rc->data_end.week > rc->action_week.week) ||
+		   (rc->data_end.year > rc->action_week.year)) {
+		fprintf(stderr, "%s: end date is after target date\n",
+			rc->name);
+		return false;
+	}
+
+	return true;
+}
+
 static void print_rc(struct rc *rc)
 {
 	const char *action = "default";
@@ -311,7 +355,7 @@ static void print_rc(struct rc *rc)
 
 	/* print ending week */
 	if (rc->data_end.week == WEEK_ID_ALL) {
-		fprintf(stderr, "end:    %d\n",
+		fprintf(stderr, "end:    %d last week\n",
 			rc->data_end.year);
 	} else {
 		fprintf(stderr, "end:    %d week %d\n",
@@ -321,7 +365,7 @@ static void print_rc(struct rc *rc)
 
 	/* print action week */
 	if (rc->action_week.week == WEEK_ID_ALL) {
-		fprintf(stderr, "target: %d\n",
+		fprintf(stderr, "target: %d last week\n",
 			rc->action_week.year);
 	} else {
 		fprintf(stderr, "target: %d week %d\n",
