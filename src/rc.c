@@ -72,9 +72,13 @@ int rc_read_options(struct rc *rc, int argc, char **argv)
 			break;
 		case OPTION_PREDICT:
 			rc->action = ACTION_PREDICT;
+			if (parse_date(rc, optarg, &rc->action_week) < 0)
+				return -1;
 			break;
 		case OPTION_RANK:
 			rc->action = ACTION_RANK;
+			if (parse_date(rc, optarg, &rc->action_week) < 0)
+				return -1;
 			break;
 		case OPTION_SCRIPTS:
 			list_add_front(&rc->script_dirs, optarg);
@@ -313,6 +317,16 @@ static void print_rc(struct rc *rc)
 		fprintf(stderr, "end:    %d week %d\n",
 			rc->data_end.year,
 			rc->data_end.week);
+	}
+
+	/* print action week */
+	if (rc->action_week.week == WEEK_ID_ALL) {
+		fprintf(stderr, "target: %d\n",
+			rc->action_week.year);
+	} else {
+		fprintf(stderr, "target: %d week %d\n",
+			rc->action_week.year,
+			rc->action_week.week);
 	}
 
 	/* print algos */
