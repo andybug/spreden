@@ -29,6 +29,7 @@ static void display_usage(void)
 static void init_state(struct state *state)
 {
 	rc_init(&state->rc);
+	db_init(state);
 }
 
 int main(int argc, char **argv)
