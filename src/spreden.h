@@ -43,7 +43,8 @@ struct rc {
 	const char *sport;
 	struct week_id data_begin;
 	struct week_id data_end;
-	struct week_id action_week;
+	struct week_id action_begin;
+	struct week_id action_end;
 	struct list user_algorithms;
 	struct list script_dirs;
 	struct list data_dirs;
