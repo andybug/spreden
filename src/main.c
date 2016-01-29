@@ -28,7 +28,7 @@ static void display_usage(void)
 
 static void init_state(struct state *state)
 {
-	rc_init(&state->rc);
+	rc_init(state);
 	db_init(state);
 }
 
@@ -44,7 +44,7 @@ int main(int argc, char **argv)
 
 	init_state(&state);
 
-	if (rc_read_options(&state.rc, argc, argv) < 0)
+	if (rc_read_options(&state, argc, argv) < 0)
 		return EXIT_FAILURE;
 
 	switch (state.rc.action) {

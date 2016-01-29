@@ -18,25 +18,19 @@ enum options {
 	OPTION_VERSION
 };
 
-static int parse_date(struct rc *rc,
-		      const char *date,
-		      struct week_id *out);
-static int parse_date_range(struct rc *rc,
-			    const char *range,
-			    struct week_id *begin,
-			    struct week_id *end);
-static int parse_control_string(struct rc *rc, const char *cs);
-static int parse_algorithms(struct rc *rc,
+static int parse_control_string(struct state *s, const char *cs);
+static int parse_algorithms(struct state *s,
 			    const char *algos,
 			    struct list *list);
-static int update_data_range(struct rc *rc);
-static bool validate_rc(const struct rc *rc);
-static void print_rc(struct rc *rc);
+static int update_data_range(struct state *s);
+static bool validate_rc(const struct state *s);
+static void print_rc(const struct state *s);
 
-void rc_init(struct rc *rc)
+void rc_init(struct state *s)
 {
 	static const char *DEFAULT_NAME = "spreden";
 	static const struct week_id UNSET_WEEK = { WEEK_ID_NONE, WEEK_ID_NONE };
+	struct rc *rc = &s->rc;
 
 	rc->name = DEFAULT_NAME;
 	rc->verbose = false;
@@ -55,9 +49,10 @@ void rc_init(struct rc *rc)
 	list_add_back(&rc->data_dirs, DEFAULT_DATA_DIR);
 }
 
-int rc_read_options(struct rc *rc, int argc, char **argv)
+int rc_read_options(struct state *s, int argc, char **argv)
 {
 	int c, index, err;
+	struct rc *rc = &s->rc;
 	static const struct option options[] = {
 		{ "help",    no_argument,       NULL, OPTION_HELP },
 		{ "predict", required_argument, NULL, OPTION_PREDICT },
@@ -77,7 +72,7 @@ int rc_read_options(struct rc *rc, int argc, char **argv)
 			break;
 		case OPTION_PREDICT:
 			rc->action = ACTION_PREDICT;
-			err = parse_date_range(rc, optarg,
+			err = week_parse_range(s, optarg,
 					       &rc->action_begin,
 					       &rc->action_end);
 			if (err < 0)
@@ -85,7 +80,7 @@ int rc_read_options(struct rc *rc, int argc, char **argv)
 			break;
 		case OPTION_RANK:
 			rc->action = ACTION_RANK;
-			err = parse_date_range(rc, optarg,
+			err = week_parse_range(s, optarg,
 					       &rc->action_begin,
 					       &rc->action_end);
 			if (err < 0)
@@ -117,15 +112,16 @@ int rc_read_options(struct rc *rc, int argc, char **argv)
 		return -3;
 	}
 
-	if (parse_control_string(rc, argv[optind]) < 0)
+	if (parse_control_string(s, argv[optind]) < 0)
 		return -4;
 
 	return 0;
 }
 
-static int parse_control_string(struct rc *rc, const char *cs)
+static int parse_control_string(struct state *s, const char *cs)
 {
 	static const char *delim = ":";
+	struct rc *rc = &s->rc;
 	size_t len;
 	char *local;
 	char *sport, *dates, *algos;
@@ -147,12 +143,12 @@ static int parse_control_string(struct rc *rc, const char *cs)
 	algos = strtok_r(NULL, delim, &saveptr);
 
 	/* parse date range */
-	err = parse_date_range(rc, dates, &begin_date, &end_date);
+	err = week_parse_range(s, dates, &begin_date, &end_date);
 	if (err)
 		return -1;
 
 	/* parse the algortihm list */
-	err = parse_algorithms(rc, algos, &algorithm_list);
+	err = parse_algorithms(s, algos, &algorithm_list);
 	if (err)
 		return -2;
 
@@ -163,109 +159,23 @@ static int parse_control_string(struct rc *rc, const char *cs)
 	rc->user_algorithms = algorithm_list;
 
 	/* do date range substitutions */
-	err = update_data_range(rc);
+	err = update_data_range(s);
 	if (err)
 		return -3;
 
 	/* make sure it is valid */
-	if (!validate_rc(rc))
+	if (!validate_rc(s))
 		return -4;
 
 	if (rc->verbose)
-		print_rc(rc);
+		print_rc(s);
 
 	return 0;
 }
 
-static int parse_date(struct rc *rc, const char *date, struct week_id *out)
-{
-	static const char *week_delim = "rw";
-	static const char *end_delim = "\0";
-	size_t len;
-	char *local;
-	char *saveptr;
-	char *endptr;
-	char *year, *week;
-
-	/* make local copy of date string */
-	len = strlen(date);
-	local = alloca(len);
-	strcpy(local, date);
-
-	/* tokenize */
-	year = strtok_r(local, week_delim, &saveptr);
-	week = strtok_r(NULL, end_delim, &saveptr);
-
-	/* convert year string to integer */
-	out->year = strtol(year, &endptr, 10);
-	if (*endptr != '\0') {
-		fprintf(stderr, "%s: '%s' is not a valid year\n",
-			rc->name, year);
-		return -1;
-	}
-
-	/* if a week was provided, convert it to an integer */
-	if (week) {
-		out->week = strtol(week, &endptr, 10);
-		if (*endptr != '\0') {
-			fprintf(stderr, "%s: '%s' is not a valid week\n",
-				rc->name, week);
-			return -2;
-		}
-	} else {
-		out->week = WEEK_ID_ALL;
-	}
-
-	return 0;
-}
-
-static int parse_date_range(struct rc *rc,
-			    const char *range,
-			    struct week_id *begin,
-			    struct week_id *end)
-{
-	static const char *range_delim = "-";
-	size_t len;
-	char *local;
-	char *date1, *date2;
-	char *saveptr;
-	int err;
-
-	if (!range) {
-		fprintf(stderr, "%s: no date range provided in run control\n",
-			rc->name);
-		return -1;
-	}
-
-	/* make local copy of date range string */
-	len = strlen(range);
-	local = alloca(len);
-	strcpy(local, range);
-
-	/* tokenize */
-	date1 = strtok_r(local, range_delim, &saveptr);
-	date2 = strtok_r(NULL, range_delim, &saveptr);
-
-	/* read begin date */
-	err = parse_date(rc, date1, begin);
-	if (err)
-		return -2;
-
-	/* if end date provided, read that too */
-	if (date2) {
-		err = parse_date(rc, date2, end);
-		if (err)
-			return -3;
-	} else {
-		/* otherwise, read the entire year */
-		end->year = begin->year;
-		end->week = WEEK_ID_ALL;
-	}
-
-	return 0;
-}
-
-static int parse_algorithms(struct rc *rc, const char *algos, struct list *list)
+static int parse_algorithms(struct state *s,
+			    const char *algos,
+			    struct list *list)
 {
 	static const char *delim = ",";
 	size_t len;
@@ -289,15 +199,17 @@ static int parse_algorithms(struct rc *rc, const char *algos, struct list *list)
 
 	if (i == 0) {
 		fprintf(stderr, "%s: no algorithms provided in run control\n",
-			rc->name);
+			s->rc.name);
 		return -1;
 	}
 
 	return 0;
 }
 
-static int update_data_range(struct rc *rc)
+static int update_data_range(struct state *s)
 {
+	struct rc *rc = &s->rc;
+
 	if (rc->data_begin.week == WEEK_ID_ALL)
 		rc->data_begin.week = 1;
 
@@ -309,8 +221,10 @@ static int update_data_range(struct rc *rc)
 	return 0;
 }
 
-static bool validate_rc(const struct rc *rc)
+static bool validate_rc(const struct state *s)
 {
+	const struct rc *rc = &s->rc;
+
 	if (rc->data_begin.year > rc->data_end.year) {
 		fprintf(stderr, "%s: begin date is after end date\n", rc->name);
 		return false;
@@ -329,8 +243,10 @@ static bool validate_rc(const struct rc *rc)
 	return true;
 }
 
-static void print_rc(struct rc *rc)
+static void print_rc(const struct state *s)
 {
+	const struct rc *rc = &s->rc;
+
 	const char *action = "default";
 
 	/* heading */

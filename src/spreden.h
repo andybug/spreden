@@ -57,9 +57,16 @@ struct state {
 	struct db *db;
 };
 
+/* week.c */
+extern int week_parse(struct state *s, const char *date, struct week_id *out);
+extern int week_parse_range(struct state *s,
+			    const char *range,
+			    struct week_id *begin,
+			    struct week_id *end);
+
 /* rc.c */
-extern void rc_init(struct rc *rc);
-extern int  rc_read_options(struct rc *rc, int argc, char **argv);
+extern void rc_init(struct state *s);
+extern int  rc_read_options(struct state *s, int argc, char **argv);
 
 /* db.c */
 extern int db_init(struct state *s);
