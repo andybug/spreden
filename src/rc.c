@@ -9,13 +9,20 @@
 #include "spreden.h"
 #include "list.h"
 
+enum command {
+	COMMAND_ANALYZE,
+	COMMAND_HELP,
+	COMMAND_PREDICT,
+	COMMAND_RANK,
+	COMMAND_VERSION,
+	/* error */
+	COMMAND_ERROR
+};
+
 enum options {
-	OPTION_HELP,
-	OPTION_PREDICT,
-	OPTION_RANK,
-	OPTION_SCRIPTS,
-	OPTION_VERBOSE,
-	OPTION_VERSION
+	OPTION_DATA_DIR,
+	OPTION_SCRIPTS_DIR,
+	OPTION_VERBOSE
 };
 
 static int parse_control_string(struct state *s, const char *cs);
@@ -25,6 +32,33 @@ static int parse_algorithms(struct state *s,
 static int update_data_range(struct state *s);
 static bool validate_rc(const struct state *s);
 static void print_rc(const struct state *s);
+
+
+/* command line parsing */
+
+static enum command get_command(const char *cmd)
+{
+	enum command ret = COMMAND_ERROR;
+
+	if (strcmp(cmd, "analyze") == 0)
+		ret = COMMAND_ANALYZE;
+	else if (strcmp(cmd, "help") == 0)
+		ret = COMMAND_HELP;
+	else if (strcmp(cmd, "predict") == 0)
+		ret = COMMAND_PREDICT;
+	else if (strcmp(cmd, "rank") == 0)
+		ret = COMMAND_RANK;
+	else if (strcmp(cmd, "version") == 0)
+		ret = COMMAND_VERSION;
+	else
+		fprintf(stderr, "%s: unknown command '%s'; run \"spreden help\" for usage\n",
+			"PROG_NAME", cmd);
+
+	return ret;
+}
+
+
+/* extern functions */
 
 void rc_init(struct state *s)
 {
