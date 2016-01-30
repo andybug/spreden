@@ -20,8 +20,9 @@ enum command {
 };
 
 enum options {
-	OPTION_DATA_DIR,
-	OPTION_SCRIPTS_DIR,
+	OPTION_DATA,
+	OPTION_SCRIPTS,
+	OPTION_START,
 	OPTION_VERBOSE
 };
 
@@ -90,69 +91,38 @@ void rc_init(struct state *s)
 
 int rc_read_options(struct state *s, int argc, char **argv)
 {
-	int c, index, err;
 	struct rc *rc = &s->rc;
-	static const struct option options[] = {
-		{ "help",    no_argument,       NULL, OPTION_HELP },
-		{ "predict", required_argument, NULL, OPTION_PREDICT },
-		{ "rank",    required_argument, NULL, OPTION_RANK },
-		{ "scripts", required_argument, NULL, OPTION_SCRIPTS },
-		{ "verbose", no_argument,       NULL, OPTION_VERBOSE },
-		{ "version", no_argument,       NULL, OPTION_VERSION },
-		{ NULL, 0, 0, 0 }
-	};
+	enum command cmd = COMMAND_HELP;
 
-	rc->name = argv[0];
+	/* save off how the program was called for error displays */
+	prog_name = argv[0];
 
-	while ((c = getopt_long(argc, argv, "", options, &index)) != -1) {
-		switch (c) {
-		case OPTION_HELP:
-			rc->action = ACTION_USAGE;
-			break;
-		case OPTION_PREDICT:
-			rc->action = ACTION_PREDICT;
-			err = week_parse_range(s, optarg,
-					       &rc->action_begin,
-					       &rc->action_end);
-			if (err < 0)
-				return -1;
-			break;
-		case OPTION_RANK:
-			rc->action = ACTION_RANK;
-			err = week_parse_range(s, optarg,
-					       &rc->action_begin,
-					       &rc->action_end);
-			if (err < 0)
-				return -1;
-			break;
-		case OPTION_SCRIPTS:
-			list_add_front(&rc->script_dirs, optarg);
-			break;
-		case OPTION_VERBOSE:
-			rc->verbose = true;
-			break;
-		case OPTION_VERSION:
-			rc->action = ACTION_VERSION;
-			break;
-		default:
-			return -1;
-		}
+	/*
+	 * if a command was provided, try to parse it
+	 * otherwise, fall through to help
+	 */
+	if (argc >= 2)
+		cmd = get_command(argv[1]);
+
+	switch (cmd) {
+	case COMMAND_ANALYZE:
+		rc->action = ACTION_ANALYZE;
+		break;
+	case COMMAND_HELP:
+		rc->action = ACTION_USAGE;
+		break;
+	case COMMAND_PREDICT:
+		rc->action = ACTION_PREDICT;
+		break;
+	case COMMAND_RANK:
+		rc->action = ACTION_RANK;
+		break;
+	case COMMAND_VERSION:
+		rc->action = ACTION_VERSION;
+		break;
+	case COMMAND_ERROR:
+		return -1;
 	}
-
-	if (rc->action == ACTION_NONE) {
-		fprintf(stderr, "%s: no action specified; see --help for usage\n",
-			rc->name);
-		return -2;
-	}
-
-	if (optind >= argc) {
-		fprintf(stderr, "%s: requires a run control string; see --help for usage\n",
-			rc->name);
-		return -3;
-	}
-
-	if (parse_control_string(s, argv[optind]) < 0)
-		return -4;
 
 	return 0;
 }

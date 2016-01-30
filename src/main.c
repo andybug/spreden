@@ -16,13 +16,13 @@ static void display_version(void)
 static void display_usage(void)
 {
 	static const char usage[] =
-		"spreden is a work in progress. Current options:\n"
-		"--help\n"
-		"--predict\n"
-		"--rank\n"
-		"--scripts\n"
-		"--verbose\n"
-		"--version\n";
+		"usage: spreden <command> [args] [options]\n"
+		"    commands:\n"
+		"        analyze\n"
+		"        help\n"
+		"        predict\n"
+		"        rank\n"
+		"        version\n";
 	fputs(usage, stdout);
 }
 
@@ -58,9 +58,10 @@ int main(int argc, char **argv)
 	case ACTION_VERSION:
 		display_version();
 		break;
+	case ACTION_ANALYZE:
 	case ACTION_RANK:
 	case ACTION_PREDICT:
-		puts("rank/predict actions not yet implemented");
+		puts("action not implemented");
 		break;
 	}
 
