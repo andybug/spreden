@@ -28,7 +28,7 @@ int week_parse(struct state *s, const char *date, struct week_id *out)
 	out->year = strtol(year, &endptr, 10);
 	if (*endptr != '\0') {
 		fprintf(stderr, "%s: '%s' is not a valid year\n",
-			s->rc.name, year);
+			prog_name, year);
 		return -1;
 	}
 
@@ -37,7 +37,7 @@ int week_parse(struct state *s, const char *date, struct week_id *out)
 		out->week = strtol(week, &endptr, 10);
 		if (*endptr != '\0') {
 			fprintf(stderr, "%s: '%s' is not a valid week\n",
-				s->rc.name, week);
+				prog_name, week);
 			return -2;
 		}
 	} else {
@@ -61,7 +61,7 @@ int week_parse_range(struct state *s,
 
 	if (!range) {
 		fprintf(stderr, "%s: no date range provided in run control\n",
-			s->rc.name);
+			prog_name);
 		return -1;
 	}
 

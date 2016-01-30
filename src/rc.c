@@ -25,6 +25,14 @@ enum options {
 	OPTION_VERBOSE
 };
 
+
+/* program name from the command line */
+const char *prog_name = "spreden";
+
+/* verbose mode from the command line */
+bool verbose = false;
+
+
 static int parse_control_string(struct state *s, const char *cs);
 static int parse_algorithms(struct state *s,
 			    const char *algos,
@@ -52,7 +60,7 @@ static enum command get_command(const char *cmd)
 		ret = COMMAND_VERSION;
 	else
 		fprintf(stderr, "%s: unknown command '%s'; run \"spreden help\" for usage\n",
-			"PROG_NAME", cmd);
+			prog_name, cmd);
 
 	return ret;
 }
@@ -62,12 +70,9 @@ static enum command get_command(const char *cmd)
 
 void rc_init(struct state *s)
 {
-	static const char *DEFAULT_NAME = "spreden";
 	static const struct week_id UNSET_WEEK = { WEEK_ID_NONE, WEEK_ID_NONE };
 	struct rc *rc = &s->rc;
 
-	rc->name = DEFAULT_NAME;
-	rc->verbose = false;
 	rc->action = ACTION_NONE;
 	rc->sport = NULL;
 	rc->data_begin = UNSET_WEEK;
@@ -201,7 +206,7 @@ static int parse_control_string(struct state *s, const char *cs)
 	if (!validate_rc(s))
 		return -4;
 
-	if (rc->verbose)
+	if (verbose)
 		print_rc(s);
 
 	return 0;
@@ -233,7 +238,7 @@ static int parse_algorithms(struct state *s,
 
 	if (i == 0) {
 		fprintf(stderr, "%s: no algorithms provided in run control\n",
-			s->rc.name);
+			prog_name);
 		return -1;
 	}
 
@@ -260,17 +265,19 @@ static bool validate_rc(const struct state *s)
 	const struct rc *rc = &s->rc;
 
 	if (rc->data_begin.year > rc->data_end.year) {
-		fprintf(stderr, "%s: begin date is after end date\n", rc->name);
+		fprintf(stderr, "%s: begin date is after end date\n",
+			prog_name);
 		return false;
 	} else if (rc->data_begin.year == rc->data_end.year &&
 		   rc->data_begin.week > rc->data_end.week) {
-		fprintf(stderr, "%s: begin date is after end date\n", rc->name);
+		fprintf(stderr, "%s: begin date is after end date\n",
+			prog_name);
 		return false;
 	} else if ((rc->data_end.year == rc->action_end.year &&
 		    rc->data_end.week > rc->action_end.week) ||
 		   (rc->data_end.year > rc->action_end.year)) {
 		fprintf(stderr, "%s: end date is after target date\n",
-			rc->name);
+			prog_name);
 		return false;
 	}
 

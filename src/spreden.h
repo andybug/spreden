@@ -37,8 +37,6 @@ struct game;
 
 /* rc contains user-defined parameters */
 struct rc {
-	const char *name;
-	bool verbose;
 	enum action action;
 	const char *sport;
 	struct week_id data_begin;
@@ -56,6 +54,16 @@ struct state {
 	struct rc rc;
 	struct db *db;
 };
+
+
+/* global data */
+
+/* rc.c */
+extern const char *prog_name;
+extern bool verbose;
+
+
+/* functions */
 
 /* week.c */
 extern int week_parse(struct state *s, const char *date, struct week_id *out);
