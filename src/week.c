@@ -5,7 +5,7 @@
 
 #include "spreden.h"
 
-int week_parse(struct state *s, const char *date, struct week_id *out)
+int week_parse(const char *date, struct week_id *out)
 {
 	static const char *week_delim = "rw";
 	static const char *end_delim = "\0";
@@ -47,8 +47,7 @@ int week_parse(struct state *s, const char *date, struct week_id *out)
 	return 0;
 }
 
-int week_parse_range(struct state *s,
-		     const char *range,
+int week_parse_range(const char *range,
 		     struct week_id *begin,
 		     struct week_id *end)
 {
@@ -75,13 +74,13 @@ int week_parse_range(struct state *s,
 	date2 = strtok_r(NULL, range_delim, &saveptr);
 
 	/* read begin date */
-	err = week_parse(s, date1, begin);
+	err = week_parse(date1, begin);
 	if (err)
 		return -2;
 
 	/* if end date provided, read that too */
 	if (date2) {
-		err = week_parse(s, date2, end);
+		err = week_parse(date2, end);
 		if (err)
 			return -3;
 	} else {

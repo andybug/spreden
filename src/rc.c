@@ -36,10 +36,8 @@ bool verbose = false;
 
 /* misc helpers */
 
-static int update_data_range(struct state *s)
+static int update_data_range(struct rc *rc)
 {
-	struct rc *rc = &s->rc;
-
 	if (rc->data_begin.week == WEEK_ID_BEGIN)
 		rc->data_begin.week = 1;
 
@@ -51,10 +49,8 @@ static int update_data_range(struct state *s)
 	return 0;
 }
 
-static bool validate_rc(const struct state *s)
+static bool validate_rc(const struct rc *rc)
 {
-	const struct rc *rc = &s->rc;
-
 	if (rc->data_begin.year > rc->data_end.year) {
 		fprintf(stderr, "%s: begin date is after end date\n",
 			prog_name);
@@ -75,10 +71,8 @@ static bool validate_rc(const struct state *s)
 	return true;
 }
 
-static void print_rc(const struct state *s)
+static void print_rc(const struct rc *rc)
 {
-	const struct rc *rc = &s->rc;
-
 	const char *action = "default";
 
 	/* heading */
@@ -221,7 +215,7 @@ static int parse_rc_args(struct state *s, int argc, char **argv)
 	sport = strdup(argv[0]);
 
 	/* parse action range */
-	err = week_parse_range(s, argv[1], &begin_date, &end_date);
+	err = week_parse_range(argv[1], &begin_date, &end_date);
 	if (err)
 		return -2;
 
@@ -238,15 +232,15 @@ static int parse_rc_args(struct state *s, int argc, char **argv)
 	rc->user_algorithms = algorithm_list;
 
 	/* fix data ranges for action dates */
-	if (!update_data_range(s))
+	if (!update_data_range(rc))
 		return -3;
 
 	/* make sure it is valid */
-	if (!validate_rc(s))
+	if (!validate_rc(rc))
 		return -4;
 
 	if (verbose)
-		print_rc(s);
+		print_rc(rc);
 
 	return 0;
 }

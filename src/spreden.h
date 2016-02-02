@@ -68,9 +68,8 @@ extern bool verbose;
 /* functions */
 
 /* week.c */
-extern int week_parse(struct state *s, const char *date, struct week_id *out);
-extern int week_parse_range(struct state *s,
-			    const char *range,
+extern int week_parse(const char *date, struct week_id *out);
+extern int week_parse_range(const char *range,
 			    struct week_id *begin,
 			    struct week_id *end);
 
