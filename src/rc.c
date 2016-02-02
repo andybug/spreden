@@ -34,196 +34,17 @@ const char *prog_name = "spreden";
 bool verbose = false;
 
 
-static int parse_control_string(struct state *s, const char *cs);
-static int parse_algorithms(struct state *s,
-			    const char *algos,
-			    struct list *list);
-static int update_data_range(struct state *s);
-static bool validate_rc(const struct state *s);
-static void print_rc(const struct state *s);
-
-
-/* command line parsing */
-
-static enum command get_command(const char *cmd)
-{
-	enum command ret = COMMAND_ERROR;
-
-	if (strcmp(cmd, "analyze") == 0)
-		ret = COMMAND_ANALYZE;
-	else if (strcmp(cmd, "help") == 0)
-		ret = COMMAND_HELP;
-	else if (strcmp(cmd, "predict") == 0)
-		ret = COMMAND_PREDICT;
-	else if (strcmp(cmd, "rank") == 0)
-		ret = COMMAND_RANK;
-	else if (strcmp(cmd, "version") == 0)
-		ret = COMMAND_VERSION;
-	else
-		fprintf(stderr, "%s: unknown command '%s'; run \"spreden help\" for usage\n",
-			prog_name, cmd);
-
-	return ret;
-}
-
-
-/* extern functions */
-
-void rc_init(struct state *s)
-{
-	static const struct week_id UNSET_WEEK = { WEEK_ID_NONE, WEEK_ID_NONE };
-	struct rc *rc = &s->rc;
-
-	rc->action = ACTION_NONE;
-	rc->sport = NULL;
-	rc->data_begin = UNSET_WEEK;
-	rc->data_end = UNSET_WEEK;
-	rc->action_begin = UNSET_WEEK;
-	rc->action_end = UNSET_WEEK;
-	list_init(&rc->user_algorithms);
-
-	list_init(&rc->script_dirs);
-	list_add_back(&rc->script_dirs, DEFAULT_SCRIPT_DIR);
-
-	list_init(&rc->data_dirs);
-	list_add_back(&rc->data_dirs, DEFAULT_DATA_DIR);
-}
-
-int rc_read_options(struct state *s, int argc, char **argv)
-{
-	struct rc *rc = &s->rc;
-	enum command cmd = COMMAND_HELP;
-
-	/* save off how the program was called for error displays */
-	prog_name = argv[0];
-
-	/*
-	 * if a command was provided, try to parse it
-	 * otherwise, fall through to help
-	 */
-	if (argc >= 2)
-		cmd = get_command(argv[1]);
-
-	switch (cmd) {
-	case COMMAND_ANALYZE:
-		rc->action = ACTION_ANALYZE;
-		break;
-	case COMMAND_HELP:
-		rc->action = ACTION_USAGE;
-		break;
-	case COMMAND_PREDICT:
-		rc->action = ACTION_PREDICT;
-		break;
-	case COMMAND_RANK:
-		rc->action = ACTION_RANK;
-		break;
-	case COMMAND_VERSION:
-		rc->action = ACTION_VERSION;
-		break;
-	case COMMAND_ERROR:
-		return -1;
-	}
-
-	return 0;
-}
-
-static int parse_control_string(struct state *s, const char *cs)
-{
-	static const char *delim = ":";
-	struct rc *rc = &s->rc;
-	size_t len;
-	char *local;
-	char *sport, *dates, *algos;
-	char *saveptr;
-	struct list algorithm_list;
-	struct week_id begin_date, end_date;
-	int err;
-
-	list_init(&algorithm_list);
-
-	/* make a local copy of the control string */
-	len = strlen(cs);
-	local = alloca(len + 1);
-	strcpy(local, cs);
-
-	/* tokenize into components */
-	sport = strtok_r(local, delim, &saveptr);
-	dates = strtok_r(NULL, delim, &saveptr);
-	algos = strtok_r(NULL, delim, &saveptr);
-
-	/* parse date range */
-	err = week_parse_range(s, dates, &begin_date, &end_date);
-	if (err)
-		return -1;
-
-	/* parse the algortihm list */
-	err = parse_algorithms(s, algos, &algorithm_list);
-	if (err)
-		return -2;
-
-	/* update rc */
-	rc->sport = strdup(sport);
-	rc->data_begin = begin_date;
-	rc->data_end = end_date;
-	rc->user_algorithms = algorithm_list;
-
-	/* do date range substitutions */
-	err = update_data_range(s);
-	if (err)
-		return -3;
-
-	/* make sure it is valid */
-	if (!validate_rc(s))
-		return -4;
-
-	if (verbose)
-		print_rc(s);
-
-	return 0;
-}
-
-static int parse_algorithms(struct state *s,
-			    const char *algos,
-			    struct list *list)
-{
-	static const char *delim = ",";
-	size_t len;
-	char *saveptr;
-	char *local;
-	char *a;
-	int i = 0;
-
-	/* make local copy of algos string */
-	len = strlen(algos);
-	local = alloca(len + 1);
-	strcpy(local, algos);
-
-	/* tokenize into list */
-	a = strtok_r(local, delim, &saveptr);
-	while (a) {
-		list_add_back(list, strdup(a));
-		a = strtok_r(NULL, delim, &saveptr);
-		i++;
-	}
-
-	if (i == 0) {
-		fprintf(stderr, "%s: no algorithms provided in run control\n",
-			prog_name);
-		return -1;
-	}
-
-	return 0;
-}
+/* misc helpers */
 
 static int update_data_range(struct state *s)
 {
 	struct rc *rc = &s->rc;
 
-	if (rc->data_begin.week == WEEK_ID_ALL)
+	if (rc->data_begin.week == WEEK_ID_BEGIN)
 		rc->data_begin.week = 1;
 
 	if (rc->data_end.year == rc->action_end.year &&
-	    rc->data_end.week == WEEK_ID_ALL) {
+	    rc->data_end.week == WEEK_ID_END) {
 		rc->data_end.week = rc->action_end.week;
 	}
 
@@ -280,7 +101,7 @@ static void print_rc(const struct state *s)
 	fprintf(stderr, "sport:  %s\n", rc->sport);
 
 	/* print beginning week */
-	if (rc->data_begin.week == WEEK_ID_ALL) {
+	if (rc->data_begin.week == WEEK_ID_BEGIN) {
 		fprintf(stderr, "begin:  %d\n",
 			rc->data_begin.year);
 	} else {
@@ -290,7 +111,7 @@ static void print_rc(const struct state *s)
 	}
 
 	/* print ending week */
-	if (rc->data_end.week == WEEK_ID_ALL) {
+	if (rc->data_end.week == WEEK_ID_END) {
 		fprintf(stderr, "end:    %d last week\n",
 			rc->data_end.year);
 	} else {
@@ -300,7 +121,7 @@ static void print_rc(const struct state *s)
 	}
 
 	/* print action week */
-	if (rc->action_end.week == WEEK_ID_ALL) {
+	if (rc->action_end.week == WEEK_ID_END) {
 		fprintf(stderr, "target: %d last week\n",
 			rc->action_end.year);
 	} else {
@@ -323,4 +144,187 @@ static void print_rc(const struct state *s)
 
 	/* footer */
 	fputs("***********************\n", stderr);
+}
+
+
+/* command line parsing */
+
+static enum command get_command(const char *cmd)
+{
+	enum command ret = COMMAND_ERROR;
+
+	if (strcmp(cmd, "analyze") == 0)
+		ret = COMMAND_ANALYZE;
+	else if (strcmp(cmd, "help") == 0)
+		ret = COMMAND_HELP;
+	else if (strcmp(cmd, "predict") == 0)
+		ret = COMMAND_PREDICT;
+	else if (strcmp(cmd, "rank") == 0)
+		ret = COMMAND_RANK;
+	else if (strcmp(cmd, "version") == 0)
+		ret = COMMAND_VERSION;
+	else
+		fprintf(stderr, "%s: unknown command '%s'; run \"spreden help\" for usage\n",
+			prog_name, cmd);
+
+	return ret;
+}
+
+static int parse_algorithms(const char *algos, struct list *list)
+{
+	static const char *delim = ",";
+	size_t len;
+	char *saveptr;
+	char *local;
+	char *a;
+	int i = 0;
+
+	/* make local copy of algos string */
+	len = strlen(algos);
+	local = alloca(len + 1);
+	strcpy(local, algos);
+
+	/* tokenize into list */
+	a = strtok_r(local, delim, &saveptr);
+	while (a) {
+		list_add_back(list, strdup(a));
+		a = strtok_r(NULL, delim, &saveptr);
+		i++;
+	}
+
+	if (i == 0) {
+		fprintf(stderr, "%s: no algorithms provided in run control\n",
+			prog_name);
+		return -1;
+	}
+
+	return 0;
+}
+
+/* handle <sport> <round> <algorithms> argument chain */
+static int parse_rc_args(struct state *s, int argc, char **argv)
+{
+	int err;
+	const char *sport;
+	struct week_id begin_date, end_date;
+	struct list algorithm_list;
+	struct rc *rc = &s->rc;
+
+	/* make sure there are enough arguments */
+	if (argc < 3) {
+		fprintf(stderr, "%s: command requires three arguments (sport, round, and algorithms)\n",
+			prog_name);
+		return -1;
+	}
+
+	/* the first argument is sport; just copy it */
+	sport = strdup(argv[0]);
+
+	/* parse action range */
+	err = week_parse_range(s, argv[1], &begin_date, &end_date);
+	if (err)
+		return -2;
+
+	/* parse algortihm list */
+	list_init(&algorithm_list);
+	err = parse_algorithms(argv[2], &algorithm_list);
+	if (err)
+		return -2;
+
+	/* update rc */
+	rc->sport = strdup(sport);
+	rc->action_begin = begin_date;
+	rc->action_end = end_date;
+	rc->user_algorithms = algorithm_list;
+
+	/* fix data ranges for action dates */
+	if (!update_data_range(s))
+		return -3;
+
+	/* make sure it is valid */
+	if (!validate_rc(s))
+		return -4;
+
+	if (verbose)
+		print_rc(s);
+
+	return 0;
+}
+
+
+/* extern functions */
+
+void rc_init(struct state *s)
+{
+	static const struct week_id BEGIN_WEEK = {
+		.year = WEEK_ID_BEGIN,
+		.week = WEEK_ID_BEGIN
+	};
+	static const struct week_id END_WEEK = {
+		.year = WEEK_ID_END,
+		.week = WEEK_ID_END
+	};
+	struct rc *rc = &s->rc;
+
+	rc->action = ACTION_NONE;
+	rc->sport = NULL;
+	rc->data_begin = BEGIN_WEEK;
+	rc->data_end = END_WEEK;
+	rc->action_begin = BEGIN_WEEK;
+	rc->action_end = END_WEEK;
+	list_init(&rc->user_algorithms);
+
+	list_init(&rc->script_dirs);
+	list_add_back(&rc->script_dirs, DEFAULT_SCRIPT_DIR);
+
+	list_init(&rc->data_dirs);
+	list_add_back(&rc->data_dirs, DEFAULT_DATA_DIR);
+}
+
+int rc_read_options(struct state *s, int argc, char **argv)
+{
+	struct rc *rc = &s->rc;
+	enum command cmd = COMMAND_HELP;
+	int err;
+
+	/* save off how the program was called for error displays */
+	prog_name = argv[0];
+
+	/*
+	 * if a command was provided, try to parse it
+	 * otherwise, fall through to help
+	 */
+	if (argc >= 2)
+		cmd = get_command(argv[1]);
+
+	switch (cmd) {
+	case COMMAND_ANALYZE:
+		rc->action = ACTION_ANALYZE;
+		break;
+	case COMMAND_HELP:
+		rc->action = ACTION_USAGE;
+		break;
+	case COMMAND_PREDICT:
+		rc->action = ACTION_PREDICT;
+		break;
+	case COMMAND_RANK:
+		rc->action = ACTION_RANK;
+		break;
+	case COMMAND_VERSION:
+		rc->action = ACTION_VERSION;
+		break;
+	case COMMAND_ERROR:
+		return -1;
+	}
+
+	/* handle <sport> <round> <algorithms> */
+	if (rc->action == ACTION_ANALYZE ||
+	    rc->action == ACTION_PREDICT ||
+	    rc->action == ACTION_RANK) {
+		err = parse_rc_args(s, argc-2, argv+2);
+		if (err)
+			return -2;
+	}
+
+	return 0;
 }

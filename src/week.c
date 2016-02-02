@@ -41,7 +41,7 @@ int week_parse(struct state *s, const char *date, struct week_id *out)
 			return -2;
 		}
 	} else {
-		out->week = WEEK_ID_ALL;
+		out->week = WEEK_ID_NONE;
 	}
 
 	return 0;
@@ -87,7 +87,7 @@ int week_parse_range(struct state *s,
 	} else {
 		/* otherwise, read the entire year */
 		end->year = begin->year;
-		end->week = WEEK_ID_ALL;
+		end->week = WEEK_ID_END;
 	}
 
 	return 0;

@@ -16,8 +16,9 @@
 
 #define DB_MAX_OBJECTS 8192
 
-#define WEEK_ID_NONE (-1)
-#define WEEK_ID_ALL  SHRT_MAX
+#define WEEK_ID_NONE   (-1)
+#define WEEK_ID_BEGIN  SHRT_MIN
+#define WEEK_ID_END    SHRT_MAX
 
 enum action {
 	ACTION_ANALYZE,
