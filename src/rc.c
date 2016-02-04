@@ -358,7 +358,7 @@ void rc_init(struct state *s)
 	list_init(&rc->user_algorithms);
 
 	list_init(&rc->script_dirs);
-	list_add_back(&rc->script_dirs, DEFAULT_SCRIPT_DIR);
+	list_add_back(&rc->script_dirs, DEFAULT_SCRIPTS_DIR);
 
 	list_init(&rc->data_dirs);
 	list_add_back(&rc->data_dirs, DEFAULT_DATA_DIR);

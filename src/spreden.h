@@ -11,8 +11,8 @@
 #define SPREDEN_VERSION_MAJOR 0
 #define SPREDEN_VERSION_MINOR 1
 
-#define DEFAULT_SCRIPT_DIR "/usr/share/spreden/scripts"
-#define DEFAULT_DATA_DIR   "/usr/share/spreden/data"
+#define DEFAULT_SCRIPTS_DIR "/usr/share/spreden/scripts"
+#define DEFAULT_DATA_DIR    "/usr/share/spreden/data"
 
 #define DB_MAX_OBJECTS 8192
 
