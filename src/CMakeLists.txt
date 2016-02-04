@@ -10,7 +10,6 @@ add_executable(
   list.c
   main.c
   rc.c
-  week.c
 )
 
 target_link_libraries(
