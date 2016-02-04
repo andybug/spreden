@@ -36,12 +36,6 @@ int main(int argc, char **argv)
 {
 	struct state state;
 
-	/* display usage if no arguments provided */
-	if (argc < 2) {
-		display_usage();
-		return EXIT_FAILURE;
-	}
-
 	init_state(&state);
 
 	if (rc_read_options(&state, argc, argv) < 0)

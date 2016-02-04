@@ -21,8 +21,8 @@ enum command {
 
 enum options {
 	OPTION_DATA,
+	OPTION_DATA_START,
 	OPTION_SCRIPTS,
-	OPTION_START,
 	OPTION_VERBOSE
 };
 
@@ -232,6 +232,51 @@ static void print_rc(const struct rc *rc)
 
 /* command line parsing */
 
+static int parse_options(struct rc *rc, int argc, char **argv)
+{
+	static struct option options[] = {
+		{ "data",       required_argument, NULL, OPTION_DATA },
+		{ "data-start", required_argument, NULL, OPTION_DATA_START },
+		{ "scripts",    required_argument, NULL, OPTION_SCRIPTS },
+		{ "verbose",    no_argument,       NULL, OPTION_VERBOSE }
+	};
+	int c;
+	int index = 0;
+
+	/*
+	 * parse out all of the long options - the other
+	 * options will be moved to the end of argv
+	 */
+	while ((c = getopt_long(argc, argv, "", options, &index))) {
+		if (c == -1)
+			break;
+
+		switch (c) {
+		case OPTION_DATA:
+			list_add_front(&rc->data_dirs, optarg);
+			break;
+		case OPTION_DATA_START:
+			if (week_parse(optarg, &rc->data_begin) < 0)
+				return -1;
+			break;
+		case OPTION_SCRIPTS:
+			list_add_front(&rc->script_dirs, optarg);
+			break;
+		case OPTION_VERBOSE:
+			verbose = true;
+			break;
+		case '?':
+			break;
+		}
+	}
+
+	/*
+	 * return the index into argv that contains
+	 * the rest of the options
+	 */
+	return optind;
+}
+
 static enum command get_command(const char *cmd)
 {
 	enum command ret = COMMAND_ERROR;
@@ -285,13 +330,12 @@ static int parse_algorithms(const char *algos, struct list *list)
 }
 
 /* handle <sport> <round> <algorithms> argument chain */
-static int parse_rc_args(struct state *s, int argc, char **argv)
+static int parse_rc_args(struct rc *rc, int argc, char **argv)
 {
 	int err;
 	const char *sport;
 	struct week_id begin_date, end_date;
 	struct list algorithm_list;
-	struct rc *rc = &s->rc;
 
 	/* make sure there are enough arguments */
 	if (argc < 3) {
@@ -369,16 +413,25 @@ int rc_read_options(struct state *s, int argc, char **argv)
 	struct rc *rc = &s->rc;
 	enum command cmd = COMMAND_HELP;
 	int err;
+	int cmd_index;
 
 	/* save off how the program was called for error displays */
 	prog_name = argv[0];
 
 	/*
+	 * parse all long options
+	 * cmd_index will contain the index into argc
+	 * that will hold the command
+	 */
+	if ((cmd_index = parse_options(rc, argc, argv)) < 0)
+		return -1;
+
+	/*
 	 * if a command was provided, try to parse it
 	 * otherwise, fall through to help
 	 */
-	if (argc >= 2)
-		cmd = get_command(argv[1]);
+	if ((argc-cmd_index) > 0)
+		cmd = get_command(argv[cmd_index]);
 
 	switch (cmd) {
 	case COMMAND_ANALYZE:
@@ -397,16 +450,30 @@ int rc_read_options(struct state *s, int argc, char **argv)
 		rc->action = ACTION_VERSION;
 		break;
 	case COMMAND_ERROR:
-		return -1;
+		return -2;
 	}
 
 	/* handle <sport> <round> <algorithms> */
 	if (rc->action == ACTION_ANALYZE ||
 	    rc->action == ACTION_PREDICT ||
 	    rc->action == ACTION_RANK) {
-		err = parse_rc_args(s, argc-2, argv+2);
+		/*
+		 * calculate new argc from cmd_index to the
+		 * end of the argument vector
+		 * shift the argument vector so that argv[0]
+		 * is the first argument after the command from
+		 * the command line
+		 */
+		int new_argc = argc - cmd_index - 1;
+		char **new_argv = argv + (cmd_index + 1);
+
+		/*
+		 * parse the special sequence of arguments
+		 * for these commands
+		 */
+		err = parse_rc_args(rc, new_argc, new_argv);
 		if (err)
-			return -2;
+			return -3;
 	}
 
 	return 0;
