@@ -36,7 +36,7 @@ bool verbose = false;
 
 /* week_id functions */
 
-static int week_parse(const char *date, struct week_id *out)
+static int parse_week(const char *str, struct week_id *out)
 {
 	static const char *week_delim = "rw";
 	static const char *end_delim = "\0";
@@ -47,9 +47,9 @@ static int week_parse(const char *date, struct week_id *out)
 	char *year, *week;
 
 	/* make local copy of date string */
-	len = strlen(date);
+	len = strlen(str);
 	local = alloca(len);
-	strcpy(local, date);
+	strcpy(local, str);
 
 	/* tokenize */
 	year = strtok_r(local, week_delim, &saveptr);
@@ -78,7 +78,7 @@ static int week_parse(const char *date, struct week_id *out)
 	return 0;
 }
 
-static int week_parse_range(const char *range,
+static int parse_week_range(const char *range,
 			    struct week_id *begin,
 			    struct week_id *end)
 {
@@ -105,13 +105,13 @@ static int week_parse_range(const char *range,
 	date2 = strtok_r(NULL, range_delim, &saveptr);
 
 	/* read begin date */
-	err = week_parse(date1, begin);
+	err = parse_week(date1, begin);
 	if (err)
 		return -2;
 
 	/* if end date provided, read that too */
 	if (date2) {
-		err = week_parse(date2, end);
+		err = parse_week(date2, end);
 		if (err)
 			return -3;
 	} else {
@@ -130,9 +130,9 @@ static int update_data_range(struct rc *rc)
 	if (rc->data_begin.week == WEEK_ID_BEGIN)
 		rc->data_begin.week = 1;
 
-	if (rc->data_end.year == rc->action_end.year &&
+	if (rc->data_end.year == rc->target_end.year &&
 	    rc->data_end.week == WEEK_ID_END) {
-		rc->data_end.week = rc->action_end.week;
+		rc->data_end.week = rc->target_end.week;
 	}
 
 	return 0;
@@ -149,9 +149,9 @@ static bool validate_rc(const struct rc *rc)
 		fprintf(stderr, "%s: begin date is after end date\n",
 			prog_name);
 		return false;
-	} else if ((rc->data_end.year == rc->action_end.year &&
-		    rc->data_end.week > rc->action_end.week) ||
-		   (rc->data_end.year > rc->action_end.year)) {
+	} else if ((rc->data_end.year == rc->target_end.year &&
+		    rc->data_end.week > rc->target_end.week) ||
+		   (rc->data_end.year > rc->target_end.year)) {
 		fprintf(stderr, "%s: end date is after target date\n",
 			prog_name);
 		return false;
@@ -204,13 +204,13 @@ static void print_rc(const struct rc *rc)
 	}
 
 	/* print action week */
-	if (rc->action_end.week == WEEK_ID_END) {
+	if (rc->target_end.week == WEEK_ID_END) {
 		fprintf(stderr, "target: %d last week\n",
-			rc->action_end.year);
+			rc->target_end.year);
 	} else {
 		fprintf(stderr, "target: %d week %d\n",
-			rc->action_end.year,
-			rc->action_end.week);
+			rc->target_end.year,
+			rc->target_end.week);
 	}
 
 	/* print algos */
@@ -256,7 +256,7 @@ static int parse_options(struct rc *rc, int argc, char **argv)
 			list_add_front(&rc->data_dirs, optarg);
 			break;
 		case OPTION_DATA_START:
-			if (week_parse(optarg, &rc->data_begin) < 0)
+			if (parse_week(optarg, &rc->data_begin) < 0)
 				return -1;
 			break;
 		case OPTION_SCRIPTS:
@@ -329,7 +329,7 @@ static int parse_algorithms(const char *algos, struct list *list)
 	return 0;
 }
 
-/* handle <sport> <round> <algorithms> argument chain */
+/* handle <sport> <target week(s)> <algorithms> argument chain */
 static int parse_rc_args(struct rc *rc, int argc, char **argv)
 {
 	int err;
@@ -339,7 +339,7 @@ static int parse_rc_args(struct rc *rc, int argc, char **argv)
 
 	/* make sure there are enough arguments */
 	if (argc < 3) {
-		fprintf(stderr, "%s: command requires three arguments (sport, round, and algorithms)\n",
+		fprintf(stderr, "%s: command requires three arguments (sport, target week(s), and algorithms)\n",
 			prog_name);
 		return -1;
 	}
@@ -348,7 +348,7 @@ static int parse_rc_args(struct rc *rc, int argc, char **argv)
 	sport = strdup(argv[0]);
 
 	/* parse action range */
-	err = week_parse_range(argv[1], &begin_date, &end_date);
+	err = parse_week_range(argv[1], &begin_date, &end_date);
 	if (err)
 		return -2;
 
@@ -360,8 +360,8 @@ static int parse_rc_args(struct rc *rc, int argc, char **argv)
 
 	/* update rc */
 	rc->sport = strdup(sport);
-	rc->action_begin = begin_date;
-	rc->action_end = end_date;
+	rc->target_begin = begin_date;
+	rc->target_end = end_date;
 	rc->user_algorithms = algorithm_list;
 
 	/* fix data ranges for action dates */
@@ -397,8 +397,8 @@ void rc_init(struct state *s)
 	rc->sport = NULL;
 	rc->data_begin = BEGIN_WEEK;
 	rc->data_end = END_WEEK;
-	rc->action_begin = BEGIN_WEEK;
-	rc->action_end = END_WEEK;
+	rc->target_begin = BEGIN_WEEK;
+	rc->target_end = END_WEEK;
 	list_init(&rc->user_algorithms);
 
 	list_init(&rc->script_dirs);
@@ -453,7 +453,7 @@ int rc_read_options(struct state *s, int argc, char **argv)
 		return -2;
 	}
 
-	/* handle <sport> <round> <algorithms> */
+	/* handle <sport> <target week(s)> <algorithms> */
 	if (rc->action == ACTION_ANALYZE ||
 	    rc->action == ACTION_PREDICT ||
 	    rc->action == ACTION_RANK) {
