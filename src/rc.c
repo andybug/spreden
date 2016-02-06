@@ -130,6 +130,9 @@ static int update_data_range(struct rc *rc)
 	if (rc->data_begin.week == WEEK_ID_BEGIN)
 		rc->data_begin.week = 1;
 
+	if (rc->data_end.year == WEEK_ID_END)
+		rc->data_end.year = rc->target_end.year;
+
 	if (rc->data_end.year == rc->target_end.year &&
 	    rc->data_end.week == WEEK_ID_END) {
 		rc->data_end.week = rc->target_end.week;
@@ -365,7 +368,8 @@ static int parse_rc_args(struct rc *rc, int argc, char **argv)
 	rc->user_algorithms = algorithm_list;
 
 	/* fix data ranges for action dates */
-	if (!update_data_range(rc))
+	err = update_data_range(rc);
+	if (err)
 		return -3;
 
 	/* make sure it is valid */
