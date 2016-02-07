@@ -129,6 +129,10 @@ static int parse_week_range(const char *range,
 		/* if begin does not have a week set, make it begin */
 		if (begin->week == WEEK_ID_NONE)
 			begin->week = WEEK_ID_BEGIN;
+
+		/* if end does not have a week set, make it end */
+		if (end->week == WEEK_ID_NONE)
+			end->week = WEEK_ID_END;
 	} else {
 		/* if not end date (aka not a range), unset end */
 		end->year = WEEK_ID_NONE;
@@ -148,6 +152,9 @@ static int update_data_range(struct rc *rc)
 {
 	if (rc->data_begin.week == WEEK_ID_BEGIN)
 		rc->data_begin.week = 1;
+
+	if (rc->target_begin.week == WEEK_ID_BEGIN)
+		rc->target_begin.week = 1;
 
 	if (rc->data_end.year == WEEK_ID_END)
 		rc->data_end.year = rc->target_end.year;
