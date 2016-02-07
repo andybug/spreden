@@ -47,7 +47,7 @@ static void print_week(FILE *stream, const struct week_id *w)
 	}
 }
 
-static int parse_week(const char *str, struct week_id *out, int default_week)
+static int parse_week(const char *str, struct week_id *out)
 {
 	static const char *week_delim = "rw";
 	static const char *end_delim = "\0";
@@ -83,7 +83,7 @@ static int parse_week(const char *str, struct week_id *out, int default_week)
 			return -2;
 		}
 	} else {
-		out->week = default_week;
+		out->week = WEEK_ID_NONE;
 	}
 
 	return 0;
@@ -116,19 +116,27 @@ static int parse_week_range(const char *range,
 	date2 = strtok_r(NULL, range_delim, &saveptr);
 
 	/* read begin date */
-	err = parse_week(date1, begin, WEEK_ID_END);
+	err = parse_week(date1, begin);
 	if (err)
 		return -2;
 
 	/* if end date provided, read that too */
 	if (date2) {
-		err = parse_week(date2, end, WEEK_ID_END);
+		err = parse_week(date2, end);
 		if (err)
 			return -3;
+
+		/* if begin does not have a week set, make it begin */
+		if (begin->week == WEEK_ID_NONE)
+			begin->week = WEEK_ID_BEGIN;
 	} else {
-		/* otherwise, unset end */
+		/* if not end date (aka not a range), unset end */
 		end->year = WEEK_ID_NONE;
 		end->week = WEEK_ID_NONE;
+
+		/* and make begin's week END if not set */
+		if (begin->week == WEEK_ID_NONE)
+			begin->week = WEEK_ID_END;
 	}
 
 	return 0;
@@ -155,18 +163,35 @@ static int update_data_range(struct rc *rc)
 static bool validate_rc(const struct rc *rc)
 {
 	if (rc->data_begin.year > rc->data_end.year) {
-		fprintf(stderr, "%s: begin date is after end date\n",
+		fprintf(stderr, "%s: data begin date is after end date\n",
 			progname);
 		return false;
 	} else if (rc->data_begin.year == rc->data_end.year &&
 		   rc->data_begin.week > rc->data_end.week) {
-		fprintf(stderr, "%s: begin date is after end date\n",
+		fprintf(stderr, "%s: data begin date is after end date\n",
 			progname);
 		return false;
-	} else if ((rc->data_end.year == rc->target_end.year &&
-		    rc->data_end.week > rc->target_end.week) ||
-		   (rc->data_end.year > rc->target_end.year)) {
-		fprintf(stderr, "%s: end date is after target date\n",
+	} else if (rc->target_begin.year > rc->target_end.year) {
+		fprintf(stderr, "%s: target begin date is after end date\n",
+			progname);
+		return false;
+	} else if (rc->target_begin.year == rc->target_end.year &&
+		   rc->target_begin.week > rc->target_end.week) {
+		fprintf(stderr, "%s: target begin date is after end date\n",
+			progname);
+		return false;
+	} else if (rc->data_end.year != rc->target_end.year ||
+		   rc->data_end.week != rc->target_end.week) {
+		fprintf(stderr, "%s: data end date does not equal target end date\n",
+			progname);
+		return false;
+	} else if (rc->data_begin.year > rc->target_begin.year) {
+		fprintf(stderr, "%s: data begin date is after target begin date\n",
+			progname);
+		return false;
+	} else if (rc->data_begin.year == rc->target_begin.year &&
+		   rc->data_begin.week > rc->target_begin.week) {
+		fprintf(stderr, "%s: data begin date is after target begin date\n",
 			progname);
 		return false;
 	}
@@ -275,11 +300,12 @@ static int parse_options(struct rc *rc, int argc, char **argv)
 			list_add_front(&rc->data_dirs, optarg);
 			break;
 		case OPTION_DATA_START:
-			err = parse_week(optarg,
-					 &rc->data_begin,
-					 WEEK_ID_BEGIN);
+			err = parse_week(optarg, &rc->data_begin);
 			if (err < 0)
 				return -1;
+			/* if a week was not specified, start at beginning */
+			if (rc->data_begin.week == WEEK_ID_NONE)
+				rc->data_begin.week = WEEK_ID_BEGIN;
 			break;
 		case OPTION_SCRIPTS:
 			list_add_front(&rc->script_dirs, optarg);
