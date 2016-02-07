@@ -61,7 +61,7 @@ struct state {
 /* global data */
 
 /* rc.c */
-extern const char *prog_name;
+extern const char *progname;
 extern bool verbose;
 
 

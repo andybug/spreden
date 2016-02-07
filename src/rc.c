@@ -28,7 +28,7 @@ enum options {
 
 
 /* program name from the command line */
-const char *prog_name = "spreden";
+const char *progname = "spreden";
 
 /* verbose mode from the command line */
 bool verbose = false;
@@ -70,7 +70,7 @@ static int parse_week(const char *str, struct week_id *out, int default_week)
 	out->year = strtol(year, &endptr, 10);
 	if (*endptr != '\0') {
 		fprintf(stderr, "%s: '%s' is not a valid year\n",
-			prog_name, year);
+			progname, year);
 		return -1;
 	}
 
@@ -79,7 +79,7 @@ static int parse_week(const char *str, struct week_id *out, int default_week)
 		out->week = strtol(week, &endptr, 10);
 		if (*endptr != '\0') {
 			fprintf(stderr, "%s: '%s' is not a valid week\n",
-				prog_name, week);
+				progname, week);
 			return -2;
 		}
 	} else {
@@ -102,7 +102,7 @@ static int parse_week_range(const char *range,
 
 	if (!range) {
 		fprintf(stderr, "%s: no date range provided in run control\n",
-			prog_name);
+			progname);
 		return -1;
 	}
 
@@ -156,18 +156,18 @@ static bool validate_rc(const struct rc *rc)
 {
 	if (rc->data_begin.year > rc->data_end.year) {
 		fprintf(stderr, "%s: begin date is after end date\n",
-			prog_name);
+			progname);
 		return false;
 	} else if (rc->data_begin.year == rc->data_end.year &&
 		   rc->data_begin.week > rc->data_end.week) {
 		fprintf(stderr, "%s: begin date is after end date\n",
-			prog_name);
+			progname);
 		return false;
 	} else if ((rc->data_end.year == rc->target_end.year &&
 		    rc->data_end.week > rc->target_end.week) ||
 		   (rc->data_end.year > rc->target_end.year)) {
 		fprintf(stderr, "%s: end date is after target date\n",
-			prog_name);
+			progname);
 		return false;
 	}
 
@@ -315,7 +315,7 @@ static enum command get_command(const char *cmd)
 		ret = COMMAND_VERSION;
 	else
 		fprintf(stderr, "%s: unknown command '%s'; run \"spreden help\" for usage\n",
-			prog_name, cmd);
+			progname, cmd);
 
 	return ret;
 }
@@ -344,7 +344,7 @@ static int parse_algorithms(const char *algos, struct list *list)
 
 	if (i == 0) {
 		fprintf(stderr, "%s: no algorithms provided in run control\n",
-			prog_name);
+			progname);
 		return -1;
 	}
 
@@ -362,7 +362,7 @@ static int parse_rc_args(struct rc *rc, int argc, char **argv)
 	/* make sure there are enough arguments */
 	if (argc < 3) {
 		fprintf(stderr, "%s: command requires three arguments (sport, target week(s), and algorithms)\n",
-			prog_name);
+			progname);
 		return -1;
 	}
 
@@ -447,7 +447,7 @@ int rc_read_options(struct state *s, int argc, char **argv)
 	int cmd_index;
 
 	/* save off how the program was called for error displays */
-	prog_name = argv[0];
+	progname = argv[0];
 
 	/*
 	 * parse all long options
