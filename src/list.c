@@ -86,7 +86,7 @@ void list_clear(struct list *l)
 	l->tail = NULL;
 }
 
-void list_iter_begin(struct list *l, struct list_iter *iter)
+void list_iter_begin(const struct list *l, struct list_iter *iter)
 {
 	assert(l != NULL);
 	assert(iter != NULL);
@@ -95,14 +95,14 @@ void list_iter_begin(struct list *l, struct list_iter *iter)
 	iter->current = l->head;
 }
 
-bool list_iter_end(struct list_iter *iter)
+bool list_iter_end(const struct list_iter *iter)
 {
 	assert(iter != NULL);
 
 	return (iter->current == NULL);
 }
 
-void *list_iter_data(struct list_iter *iter)
+void *list_iter_data(const struct list_iter *iter)
 {
 	assert(iter != NULL);
 

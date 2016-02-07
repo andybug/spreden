@@ -11,15 +11,17 @@
 #define SPREDEN_VERSION_MAJOR 0
 #define SPREDEN_VERSION_MINOR 1
 
-#define DEFAULT_SCRIPT_DIR "/usr/share/spreden/scripts"
-#define DEFAULT_DATA_DIR   "/usr/share/spreden/data"
+#define DEFAULT_SCRIPTS_DIR "/usr/share/spreden/scripts"
+#define DEFAULT_DATA_DIR    "/usr/share/spreden/data"
 
 #define DB_MAX_OBJECTS 8192
 
-#define WEEK_ID_NONE (-1)
-#define WEEK_ID_ALL  SHRT_MAX
+#define WEEK_ID_NONE   (-1)
+#define WEEK_ID_BEGIN  SHRT_MIN
+#define WEEK_ID_END    SHRT_MAX
 
 enum action {
+	ACTION_ANALYZE,
 	ACTION_NONE,
 	ACTION_PREDICT,
 	ACTION_RANK,
@@ -37,13 +39,12 @@ struct game;
 
 /* rc contains user-defined parameters */
 struct rc {
-	const char *name;
-	bool verbose;
 	enum action action;
 	const char *sport;
 	struct week_id data_begin;
 	struct week_id data_end;
-	struct week_id action_week;
+	struct week_id target_begin;
+	struct week_id target_end;
 	struct list user_algorithms;
 	struct list script_dirs;
 	struct list data_dirs;
@@ -56,9 +57,19 @@ struct state {
 	struct db *db;
 };
 
+
+/* global data */
+
 /* rc.c */
-extern void rc_init(struct rc *rc);
-extern int  rc_read_options(struct rc *rc, int argc, char **argv);
+extern const char *progname;
+extern bool verbose;
+
+
+/* functions */
+
+/* rc.c */
+extern void rc_init(struct state *s);
+extern int  rc_read_options(struct state *s, int argc, char **argv);
 
 /* db.c */
 extern int db_init(struct state *s);
