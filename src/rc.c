@@ -248,20 +248,13 @@ static void print_rc(const struct rc *rc)
 	fputc('\n', stderr);
 
 	/* print target week/range */
-	if (rc->target_begin.year == rc->target_end.year &&
-	    rc->target_begin.week == rc->target_end.week) {
-		fputs("target:       ", stderr);
-		print_week(stderr, &rc->target_begin);
-		fputc('\n', stderr);
-	} else {
-		fputs("target-begin: ", stderr);
-		print_week(stderr, &rc->target_begin);
-		fputc('\n', stderr);
+	fputs("target-begin: ", stderr);
+	print_week(stderr, &rc->target_begin);
+	fputc('\n', stderr);
 
-		fputs("target-end:   ", stderr);
-		print_week(stderr, &rc->target_end);
-		fputc('\n', stderr);
-	}
+	fputs("target-end:   ", stderr);
+	print_week(stderr, &rc->target_end);
+	fputc('\n', stderr);
 
 	/* print algos */
 	fputs("algos:        [ ", stderr);
