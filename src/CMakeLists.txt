@@ -14,7 +14,6 @@ add_executable(
 
 target_link_libraries(
   spreden
-  jsmn
   guile-2.0
 )
 
