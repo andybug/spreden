@@ -26,17 +26,11 @@ static void display_usage(void)
 	fputs(usage, stdout);
 }
 
-static void init_state(struct state *state)
-{
-	rc_init(state);
-	db_init(state);
-}
-
 int main(int argc, char **argv)
 {
 	struct state state;
 
-	init_state(&state);
+	memset(&state, 0, sizeof(struct state));
 
 	if (rc_read_options(&state, argc, argv) < 0)
 		return EXIT_FAILURE;

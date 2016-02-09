@@ -434,7 +434,7 @@ static int parse_rc_args(struct rc *rc, int argc, char **argv)
 
 /* extern functions */
 
-void rc_init(struct state *s)
+void rc_init(struct rc *rc)
 {
 	static const struct week_id BEGIN_WEEK = {
 		.year = WEEK_ID_BEGIN,
@@ -448,7 +448,6 @@ void rc_init(struct state *s)
 		.year = WEEK_ID_NONE,
 		.week = WEEK_ID_NONE
 	};
-	struct rc *rc = &s->rc;
 
 	rc->action = ACTION_NONE;
 	rc->sport = NULL;
@@ -474,6 +473,9 @@ int rc_read_options(struct state *s, int argc, char **argv)
 
 	/* save off how the program was called for error displays */
 	progname = argv[0];
+
+	/* setup rc with default values */
+	rc_init(rc);
 
 	/*
 	 * parse all long options

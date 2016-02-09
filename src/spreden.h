@@ -68,7 +68,6 @@ extern bool verbose;
 /* functions */
 
 /* rc.c */
-extern void rc_init(struct state *s);
 extern int  rc_read_options(struct state *s, int argc, char **argv);
 
 /* db.c */
