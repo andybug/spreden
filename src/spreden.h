@@ -14,11 +14,12 @@
 #define DEFAULT_SCRIPTS_DIR "/usr/share/spreden/scripts"
 #define DEFAULT_DATA_DIR    "/usr/share/spreden/data"
 
-#define DB_MAX_OBJECTS 8192
-
 #define WEEK_ID_NONE   (-1)
 #define WEEK_ID_BEGIN  SHRT_MIN
 #define WEEK_ID_END    SHRT_MAX
+
+#define TEAM_NAME_MAX    32
+#define TEAM_SCHED_MAX  256
 
 enum action {
 	ACTION_ANALYZE,
@@ -34,7 +35,12 @@ struct week_id {
 	short week;
 };
 
-struct team;
+struct team {
+	char name[TEAM_NAME_MAX];
+	int sched[TEAM_SCHED_MAX];
+	int sched_len;
+};
+
 struct game;
 
 /* rc contains user-defined parameters */
@@ -68,13 +74,9 @@ extern bool verbose;
 /* functions */
 
 /* rc.c */
-extern int  rc_read_options(struct state *s, int argc, char **argv);
+extern int rc_read_options(struct state *s, int argc, char **argv);
 
 /* db.c */
-extern int db_init(struct state *s);
-extern int db_add_team(struct state *s, const uuid_t uuid, struct team *t);
-extern struct team *db_get_team(struct state *s, const uuid_t uuid);
-extern int db_add_game(struct state *s, const uuid_t uuid, struct game *g);
-extern struct game *db_get_game(struct state *s, const uuid_t uuid);
+extern int db_load(struct state *s);
 
 #endif
