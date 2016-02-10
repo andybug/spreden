@@ -41,7 +41,13 @@ struct team {
 	int sched_len;
 };
 
-struct game;
+struct game {
+	int home_team;
+	int home_score;
+	int away_team;
+	int away_score;
+	bool neutral;
+};
 
 /* rc contains user-defined parameters */
 struct rc {

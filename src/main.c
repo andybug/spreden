@@ -49,7 +49,6 @@ int main(int argc, char **argv)
 	case ACTION_ANALYZE:
 	case ACTION_RANK:
 	case ACTION_PREDICT:
-		puts("action not implemented");
 		db_load(&state);
 		break;
 	}
