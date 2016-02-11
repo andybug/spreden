@@ -68,6 +68,17 @@ static int hash_add(struct db *db, const char *uuid, int team)
 	return 0;
 }
 
+static int hash_get(struct db *db, const char *uuid)
+{
+	const struct team_hash_entry *entry;
+
+	HASH_FIND_STR(db->teams_hash, uuid, entry);
+	if (entry)
+		return entry->team;
+
+	return -1;
+}
+
 
 static void db_print_sizes(const struct db *db)
 {

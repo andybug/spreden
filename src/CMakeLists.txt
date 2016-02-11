@@ -14,6 +14,7 @@ add_executable(
 
 target_link_libraries(
   spreden
+  uuid
   yajl
   guile-2.0
 )
