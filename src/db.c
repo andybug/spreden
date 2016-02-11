@@ -8,6 +8,8 @@
 
 #include "spreden.h"
 
+#define UUID_LENGTH      36
+
 #define DB_MAX_TEAMS    256
 #define DB_MAX_GAMES  32768
 #define DB_MAX_WEEKS    512
@@ -18,18 +20,59 @@ struct week {
 	int game_end;
 };
 
+struct team_hash_entry {
+	UT_hash_handle hh;
+	char uuid[UUID_LENGTH+1];
+	int team;
+};
+
 struct db {
 	struct team teams[DB_MAX_TEAMS];
 	struct game games[DB_MAX_GAMES];
 	struct week weeks[DB_MAX_WEEKS];
+	struct team_hash_entry *teams_hash;
 	unsigned int num_teams;
 	unsigned int num_games;
 	unsigned int num_weeks;
 };
 
 
+/* hash functions */
+
+static int hash_add(struct db *db, const char *uuid, int team)
+{
+	uuid_t temp;
+	struct team_hash_entry *entry;
+
+	/* make sure it's a valid uuid */
+	if (uuid_parse(uuid, temp) < 0) {
+		fprintf(stderr, "%s: invalid uuid '%s'\n", progname, uuid);
+		return -1;
+	}
+
+	/* allocate hash entry */
+	entry = malloc(sizeof(struct team_hash_entry));
+	if (!entry) {
+		fprintf(stderr, "%s: malloc failed\n", progname);
+		return -2;
+	}
+
+	/* copy fields */
+	strncpy(entry->uuid, uuid, UUID_LENGTH);
+	entry->uuid[UUID_LENGTH] = '\0';
+	entry->team = team;
+
+	/* add to hash table */
+	HASH_ADD_STR(db->teams_hash, uuid, entry);
+
+	return 0;
+}
+
+
 static void db_print_sizes(const struct db *db)
 {
+	(void)db;
+
 	fprintf(stderr, "db: DB_MAX_TEAMS = %u\n", DB_MAX_TEAMS);
 	fprintf(stderr, "db: DB_MAX_GAMES = %u\n", DB_MAX_GAMES);
 	fprintf(stderr, "db: DB_MAX_WEEKS = %u\n", DB_MAX_WEEKS);
@@ -59,6 +102,7 @@ static int db_init(struct state *s)
 	}
 
 	/* init members */
+	db->teams_hash = NULL;
 	db->num_teams = 0;
 	db->num_games = 0;
 	db->num_weeks = 0;
