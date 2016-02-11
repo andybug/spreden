@@ -4,7 +4,7 @@
 #include <assert.h>
 
 #include <uuid/uuid.h>
-#include <uthash/uthash.h>
+#include <uthash.h>
 
 #include "spreden.h"
 
