@@ -5,8 +5,9 @@
 
 #include <uuid/uuid.h>
 #include <uthash.h>
+#include <yajl/yajl_parse.h>
 
-#include "spreden.h"
+#include "../spreden.h"
 
 #define UUID_LENGTH      36
 

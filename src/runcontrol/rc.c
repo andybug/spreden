@@ -6,8 +6,8 @@
 
 #include <getopt.h>
 
-#include "spreden.h"
-#include "list.h"
+#include "../spreden.h"
+#include "../dstruct/list.h"
 
 enum command {
 	COMMAND_ANALYZE,

@@ -6,7 +6,7 @@
 
 #include <uuid/uuid.h>
 
-#include "list.h"
+#include "dstruct/list.h"
 
 #define SPREDEN_VERSION_MAJOR 0
 #define SPREDEN_VERSION_MINOR 1

@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "spreden.h"
+#include "../spreden.h"
 
 void list_init(struct list *l)
 {
