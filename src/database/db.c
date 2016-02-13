@@ -5,9 +5,9 @@
 
 #include <uuid/uuid.h>
 #include <uthash.h>
-#include <yajl/yajl_parse.h>
 
 #include "../spreden.h"
+#include "database.h"
 
 #define UUID_LENGTH      36
 
@@ -40,7 +40,7 @@ struct db {
 
 /* hash functions */
 
-static int hash_add(struct db *db, const char *uuid, int team)
+int hash_add(struct db *db, const char *uuid, int team)
 {
 	uuid_t temp;
 	struct team_hash_entry *entry;
@@ -69,7 +69,7 @@ static int hash_add(struct db *db, const char *uuid, int team)
 	return 0;
 }
 
-static int hash_get(struct db *db, const char *uuid)
+int hash_get(struct db *db, const char *uuid)
 {
 	const struct team_hash_entry *entry;
 
@@ -79,7 +79,6 @@ static int hash_get(struct db *db, const char *uuid)
 
 	return -1;
 }
-
 
 static void db_print_sizes(const struct db *db)
 {
