@@ -9,8 +9,6 @@
 #include "../spreden.h"
 #include "database.h"
 
-#define UUID_LENGTH      36
-
 #define DB_MAX_TEAMS    256
 #define DB_MAX_GAMES  32768
 #define DB_MAX_WEEKS    512
