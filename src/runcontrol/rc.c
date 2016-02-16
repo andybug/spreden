@@ -10,7 +10,7 @@
 #include "../dstruct/list.h"
 
 enum command {
-	COMMAND_ANALYZE,
+	COMMAND_ANALYZE = 1,
 	COMMAND_HELP,
 	COMMAND_PREDICT,
 	COMMAND_RANK,
@@ -20,7 +20,7 @@ enum command {
 };
 
 enum options {
-	OPTION_DATA,
+	OPTION_DATA = 1,
 	OPTION_DATA_START,
 	OPTION_SCRIPTS,
 	OPTION_VERBOSE
