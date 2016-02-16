@@ -58,8 +58,8 @@ struct rc {
 	struct week_id target_begin;
 	struct week_id target_end;
 	struct list user_algorithms;
-	struct list script_dirs;
-	struct list data_dirs;
+	const char *scripts_dir;
+	const char *data_dir;
 };
 
 struct db;

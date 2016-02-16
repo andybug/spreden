@@ -297,7 +297,7 @@ static int parse_options(struct rc *rc, int argc, char **argv)
 
 		switch (c) {
 		case OPTION_DATA:
-			list_add_front(&rc->data_dirs, optarg);
+			rc->data_dir = strdup(optarg);
 			break;
 		case OPTION_DATA_START:
 			err = parse_week(optarg, &rc->data_begin);
@@ -308,7 +308,7 @@ static int parse_options(struct rc *rc, int argc, char **argv)
 				rc->data_begin.week = WEEK_ID_BEGIN;
 			break;
 		case OPTION_SCRIPTS:
-			list_add_front(&rc->script_dirs, optarg);
+			rc->scripts_dir = strdup(optarg);
 			break;
 		case OPTION_VERBOSE:
 			verbose = true;
@@ -456,12 +456,8 @@ void rc_init(struct rc *rc)
 	rc->target_begin = NONE_WEEK;
 	rc->target_end = NONE_WEEK;
 	list_init(&rc->user_algorithms);
-
-	list_init(&rc->script_dirs);
-	list_add_back(&rc->script_dirs, DEFAULT_SCRIPTS_DIR);
-
-	list_init(&rc->data_dirs);
-	list_add_back(&rc->data_dirs, DEFAULT_DATA_DIR);
+	rc->scripts_dir = DEFAULT_SCRIPTS_DIR;
+	rc->data_dir = DEFAULT_DATA_DIR;
 }
 
 int rc_read_options(struct state *s, int argc, char **argv)
