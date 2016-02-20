@@ -6,6 +6,7 @@
 #include <uuid/uuid.h>
 
 #include "../spreden.h"
+#include "../dstruct/list.h"
 #include "database.h"
 
 
@@ -88,6 +89,7 @@ static int db_init(struct state *s)
 	db->num_teams = 0;
 	db->num_games = 0;
 	db->num_weeks = 0;
+	list_init(&db->game_files);
 
 	/* finally, set the db pointer in the state */
 	s->db = db;

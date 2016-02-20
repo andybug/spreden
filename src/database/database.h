@@ -4,6 +4,7 @@
 #include <uthash.h>
 
 #include "../spreden.h"
+#include "../dstruct/list.h"
 
 #define UUID_LENGTH  36
 
@@ -31,6 +32,7 @@ struct db {
 	unsigned int num_teams;
 	unsigned int num_games;
 	unsigned int num_weeks;
+	struct list game_files;
 };
 
 /* db.c */
