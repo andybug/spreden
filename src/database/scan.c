@@ -17,6 +17,24 @@
 #define DB_MAX_PATH            1024
 #define DB_MAX_WEEKS_PER_YEAR    52
 
+/*
+ * scan_state holds all the info needed to scan
+ * for weeks in a year
+ *
+ * db_scan() fills it out for each year and passes
+ * it to scan_year()
+ */
+struct scan_state {
+	struct state *state;
+	int year;
+	int begin_week;
+	int end_week;
+	/* dirname - path to the year in the database file layout */
+	char dirname[DB_MAX_PATH];
+	/* filenames - list of sorted game files to use for year */
+	char *filenames[DB_MAX_WEEKS_PER_YEAR];
+};
+
 
 static int parse_week_num(const char *filename)
 {
@@ -128,31 +146,48 @@ static int scan_year(struct state *s, char *path,
 
 int db_scan(struct state *s)
 {
-	char path[DB_MAX_PATH];
-	int year, begin, end;
+	struct scan_state ss;
 
-	snprintf(path, DB_MAX_PATH, "%s/%s", s->rc.data_dir, s->rc.sport);
-	path[DB_MAX_PATH-1] = '\0';
+	/* init scan_state */
+	ss.state = s;
+	ss.year = s->rc.data_begin.year;
+	ss.begin_week = WEEK_ID_BEGIN;
+	ss.end_week = WEEK_ID_END;
+	memset(ss.filenames, 0, DB_MAX_WEEKS_PER_YEAR);
 
-	if (access(path, R_OK)) {
+	/* build path to year in database file layout */
+	snprintf(ss.dirname, DB_MAX_PATH, "%s/%s", s->rc.data_dir, s->rc.sport);
+	ss.dirname[DB_MAX_PATH-1] = '\0';
+
+	/* make sure the expected dir exists */
+	if (access(ss.dirname, R_OK)) {
 		fprintf(stderr, "%s: error reading dir '%s': %s\n",
-			progname, path, strerror(errno));
+			progname, ss.dirname, strerror(errno));
 		return -1;
 	}
 
-	year = s->rc.data_begin.year;
-	for (; year <= s->rc.data_end.year; year++) {
-		begin = 1;
-		end = WEEK_ID_END;
-		if (year == s->rc.data_begin.year)
-			begin = s->rc.data_begin.week;
-		if (year == s->rc.data_end.year)
-			end = s->rc.data_end.week;
+	/* for each year given in the rc,
+	 * build scan_state and call scan_year()
+	 */
+	for (; ss.year <= s->rc.data_end.year; ss.year++) {
+		/* set begin week */
+		if (ss.year == s->rc.data_begin.year)
+			ss.begin_week = s->rc.data_begin.week;
+		else
+			ss.begin_week = 1;
 
-		if (scan_year(s, path, year, begin, end) < 0)
+		/* set end week */
+		if (ss.year == s->rc.data_end.year)
+			ss.end_week = s->rc.data_end.week;
+		else
+			ss.end_week = WEEK_ID_END;
+
+		/* scan files for year */
+		if (scan_year(&ss) < 0)
 			return -2;
 	}
 
+	/* print scanned files */
 	if (verbose) {
 		struct list_iter iter;
 		list_iter_begin(&s->db->game_files, &iter);
