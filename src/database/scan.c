@@ -55,6 +55,40 @@ static int parse_week_num(const char *filename)
 	return week_num;
 }
 
+static int find_earliest_year(const char *path)
+{
+	DIR *dir;
+	struct dirent ent;
+	struct dirent *result;
+	char *endptr;
+	int earliest = INT_MAX, year;
+
+	/* open the year directory for reading */
+	dir = opendir(path);
+	if (!dir) {
+		fprintf(stderr, "%s: error reading dir '%s': %s\n",
+			progname, path, strerror(errno));
+		return -1;
+	}
+
+	/* check each entry in the dir */
+	while (readdir_r(dir, &ent, &result) == 0) {
+		if (!result)
+			break;
+
+		if (result->d_type == DT_DIR) {
+			/* convert file name to int */
+			year = (int)strtol(result->d_name, &endptr, 10);
+			/* if this year is earliest, update it */
+			if (*endptr == '\0' && year < earliest)
+				earliest = year;
+		}
+	}
+
+	closedir(dir);
+	return earliest;
+}
+
 static int scan_week(struct scan_state *ss, const char *filename)
 {
 	int week_num;
@@ -178,6 +212,13 @@ int db_scan(struct state *s)
 		return -1;
 	}
 
+	/* if begin year is unset, find the earliest */
+	if (s->rc.data_begin.year == WEEK_ID_BEGIN) {
+		ss.year = find_earliest_year(ss.pathbuf);
+		if (ss.year == INT_MAX)
+			return -2;
+	}
+
 	/* for each year given in the rc,
 	 * build scan_state and call scan_year()
 	 */
@@ -194,9 +235,11 @@ int db_scan(struct state *s)
 		else
 			ss.end_week = WEEK_ID_END;
 
+		ss.last_week = INT_MIN;
+
 		/* scan files for year */
 		if (scan_year(&ss) < 0)
-			return -2;
+			return -3;
 	}
 
 	/* print scanned files */
