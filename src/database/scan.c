@@ -3,6 +3,7 @@
 #include <string.h>
 #include <errno.h>
 #include <limits.h>
+#include <assert.h>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -13,7 +14,8 @@
 #include "../dstruct/list.h"
 #include "database.h"
 
-#define DB_MAX_PATH 1024
+#define DB_MAX_PATH            1024
+#define DB_MAX_WEEKS_PER_YEAR    52
 
 
 static int parse_week_num(const char *filename)
@@ -33,19 +35,26 @@ static int parse_week_num(const char *filename)
 	return week_num;
 }
 
-static int scan_weeks(const char *path, int *firstw, int *lastw)
+static int scan_weeks(struct state *s, const char *dirname,
+		      int rc_begin, int rc_end)
 {
 	DIR *root;
 	struct dirent ent;
 	struct dirent *result;
-	int first = INT_MAX, last = INT_MIN, count = 0;
-	int num;
+	int week_num;
+	int count = 0;
+	int last = INT_MIN;
+	int i;
+	char filename[DB_MAX_PATH];
+	char *filenames[DB_MAX_WEEKS_PER_YEAR];
+
+	assert(rc_begin != WEEK_ID_BEGIN);
 
 	/* open the year directory for reading */
-	root = opendir(path);
+	root = opendir(dirname);
 	if (!root) {
 		fprintf(stderr, "%s: error reading dir '%s': %s\n",
-			progname, path, strerror(errno));
+			progname, dirname, strerror(errno));
 		return -1;
 	}
 
@@ -55,51 +64,53 @@ static int scan_weeks(const char *path, int *firstw, int *lastw)
 			break;
 
 		/* if the filename is weekXX.*, parse out week num */
-		num = parse_week_num(result->d_name);
-		if (num < 0)
+		week_num = parse_week_num(result->d_name);
+		if (week_num < 0)
 			continue;
 
-		if (num < first)
-			first = num;
+		/*
+		 * if this week is in the range,
+		 * add it to the filenames table
+		 */
+		if (week_num >= rc_begin && week_num <= rc_end) {
+			/* create full path to file */
+			snprintf(filename, DB_MAX_PATH, "%s/%s",
+				 dirname, result->d_name);
+			filename[DB_MAX_PATH-1] = '\0';
 
-		if (num > last)
-			last = num;
+			/* add to table */
+			filenames[week_num-rc_begin] = strdup(filename);
 
-		count++;
+			/* keep track of last week */
+			if (week_num > last)
+				last = week_num;
+			count++;
+		}
 	}
 
 	closedir(root);
 
+	/* update the end value since we didn't know it coming in */
+	if (rc_end == WEEK_ID_END)
+		rc_end = last;
+
 	/* make sure that there are no holes in the data */
-	if (count != (last-first+1)) {
-		fprintf(stderr, "%s: data hole at '%s'\n", progname, path);
+	if (count != (rc_end-rc_begin+1)) {
+		fprintf(stderr, "%s: missing data in '%s'; expected %d weeks: %d-%d\n",
+			progname, dirname, rc_end-rc_begin+1, rc_begin, rc_end);
 		return -2;
 	}
 
-	/* set outputs */
-	*firstw = first;
-	*lastw = last;
+	/* finally, add the files to list */
+	for (i = 0; i < count; i++)
+		list_add_back(&s->db->game_files, filenames[i]);
 
 	return 0;
-}
-
-static void add_to_game_files(struct state *s, const char *base,
-			     int begin, int end)
-{
-	char path[DB_MAX_PATH];
-	int i;
-
-	for (i = begin; i <= end; i++) {
-		snprintf(path, DB_MAX_PATH, "%s/week%02d.json", base, i);
-		list_add_back(&s->db->game_files, strdup(path));
-	}
 }
 
 static int scan_year(struct state *s, char *path,
 		     int year, int rc_begin, int rc_end)
 {
-	int firstw, lastw;
-
 	if (rc_begin == WEEK_ID_BEGIN)
 		rc_begin = 1;
 
@@ -109,23 +120,8 @@ static int scan_year(struct state *s, char *path,
 	path[DB_MAX_PATH-1] = '\0';
 
 	/* find the first and last weeks available */
-	if (scan_weeks(path, &firstw, &lastw) < 0)
+	if (scan_weeks(s, path, rc_begin, rc_end) < 0)
 		return -1;
-
-	/* validate available data against rc */
-	if (rc_begin < firstw) {
-		fprintf(stderr, "%s: data begin week %d is before available week %d\n",
-			progname, rc_begin, firstw);
-		return -2;
-	} else if (rc_end != WEEK_ID_END && rc_end > lastw) {
-		fprintf(stderr, "%s: data end week %d is after available week %d\n",
-			progname, rc_end, lastw);
-		return -3;
-	}
-
-	/* add the path to each week to the game files list */
-	add_to_game_files(s, path, rc_begin,
-			  rc_end == WEEK_ID_END ? lastw : rc_end);
 
 	return 0;
 }
@@ -161,7 +157,8 @@ int db_scan(struct state *s)
 		struct list_iter iter;
 		list_iter_begin(&s->db->game_files, &iter);
 		while (!list_iter_end(&iter)) {
-			fprintf(stderr, "db: %s\n", list_iter_data(&iter));
+			fprintf(stderr, "db: %s\n",
+				(char *)list_iter_data(&iter));
 			list_iter_next(&iter);
 		}
 		fprintf(stderr, "db: %d game files\n",
