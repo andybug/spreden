@@ -29,8 +29,10 @@ struct scan_state {
 	int year;
 	int begin_week;
 	int end_week;
-	/* dirname - path to the year in the database file layout */
-	char dirname[DB_MAX_PATH];
+	/* last_week - last scanned week */
+	int last_week;
+	/* pathbuf - buffer to carry the current dir/filename around */
+	char pathbuf[DB_MAX_PATH];
 	/* filenames - list of sorted game files to use for year */
 	char *filenames[DB_MAX_WEEKS_PER_YEAR];
 };
@@ -53,25 +55,62 @@ static int parse_week_num(const char *filename)
 	return week_num;
 }
 
-static int scan_weeks(struct scan_state *ss)
+static int scan_week(struct scan_state *ss, const char *filename)
+{
+	int week_num;
+	int index;
+
+	/* if the filename is weekXX.*, parse out week num */
+	week_num = parse_week_num(filename);
+	if (week_num < 0)
+		return 1;
+
+	/*
+	 * if this week is in the range,
+	 * add it to the filenames table
+	 */
+	if (week_num >= ss->begin_week && week_num <= ss->end_week) {
+		/* build full path to file */
+		snprintf(ss->pathbuf, DB_MAX_PATH, "%s/%s/%d/%s",
+			 ss->state->rc.data_dir,
+			 ss->state->rc.sport,
+			 ss->year,
+			 filename);
+		ss->pathbuf[DB_MAX_PATH-1] = '\0';
+
+		/* add to table */
+		index = week_num - ss->begin_week;
+		ss->filenames[index] = strdup(ss->pathbuf);
+
+		/* keep track of last week */
+		if (week_num > ss->last_week)
+			ss->last_week = week_num;
+	}
+
+	return 0;
+}
+
+static int scan_year(struct scan_state *ss)
 {
 	DIR *root;
 	struct dirent ent;
 	struct dirent *result;
-	int week_num;
-	int count = 0;
-	int last = INT_MIN;
+	int scan_result;
+	int num_weeks = 0;
 	int i;
-	char filename[DB_MAX_PATH];
-	int index;
 
 	assert(ss->begin_week != WEEK_ID_BEGIN);
 
+	/* create path to year directory in db */
+	snprintf(ss->pathbuf, DB_MAX_PATH, "%s/%s/%d",
+		 ss->state->rc.data_dir, ss->state->rc.sport, ss->year);
+	ss->pathbuf[DB_MAX_PATH-1] = '\0';
+
 	/* open the year directory for reading */
-	root = opendir(ss->dirname);
+	root = opendir(ss->pathbuf);
 	if (!root) {
 		fprintf(stderr, "%s: error reading dir '%s': %s\n",
-			progname, ss->dirname, strerror(errno));
+			progname, ss->pathbuf, strerror(errno));
 		return -1;
 	}
 
@@ -80,29 +119,13 @@ static int scan_weeks(struct scan_state *ss)
 		if (!result)
 			break;
 
-		/* if the filename is weekXX.*, parse out week num */
-		week_num = parse_week_num(result->d_name);
-		if (week_num < 0)
-			continue;
-
-		/*
-		 * if this week is in the range,
-		 * add it to the filenames table
-		 */
-		if (week_num >= ss->begin_week && week_num <= ss->end_week) {
-			/* create full path to file */
-			snprintf(filename, DB_MAX_PATH, "%s/%s",
-				 ss->dirname, result->d_name);
-			filename[DB_MAX_PATH-1] = '\0';
-
-			/* add to table */
-			index = week_num - ss->begin_week;
-			ss->filenames[index] = strdup(filename);
-
-			/* keep track of last week */
-			if (week_num > last)
-				last = week_num;
-			count++;
+		/* detect if valid week and add to filenames */
+		scan_result = scan_week(ss, result->d_name);
+		if (scan_result < 0) {
+			closedir(root);
+			return -2;
+		} else if (scan_result == 0) {
+			num_weeks++;
 		}
 	}
 
@@ -110,36 +133,24 @@ static int scan_weeks(struct scan_state *ss)
 
 	/* update the end value since we didn't know it coming in */
 	if (ss->end_week == WEEK_ID_END)
-		ss->end_week = last;
+		ss->end_week = ss->last_week;
 
 	/* make sure that there are no holes in the data */
-	if (count != (ss->end_week - ss->begin_week + 1)) {
-		fprintf(stderr, "%s: missing data in '%s'; expected %d weeks: %d-%d\n",
+	if (num_weeks != (ss->end_week - ss->begin_week + 1)) {
+		fprintf(stderr, "%s: missing data in '%s/%s/%d'; expected %d weeks: %d-%d\n",
 			progname,
-			ss->dirname,
+			ss->state->rc.data_dir,
+			ss->state->rc.sport,
+			ss->year,
 			ss->end_week - ss->begin_week + 1,
 			ss->begin_week,
 			ss->end_week);
-		return -2;
+		return -1;
 	}
 
 	/* finally, add the files to list */
-	for (i = 0; i < count; i++)
+	for (i = 0; i < num_weeks; i++)
 		list_add_back(&ss->state->db->game_files, ss->filenames[i]);
-
-	return 0;
-}
-
-static int scan_year(struct scan_state *ss)
-{
-	/* create path to year directory in db */
-	snprintf(ss->dirname, DB_MAX_PATH, "%s/%s/%d",
-		 ss->state->rc.data_dir, ss->state->rc.sport, ss->year);
-	ss->dirname[DB_MAX_PATH-1] = '\0';
-
-	/* find the first and last weeks available */
-	if (scan_weeks(ss) < 0)
-		return -1;
 
 	return 0;
 }
@@ -153,16 +164,17 @@ int db_scan(struct state *s)
 	ss.year = s->rc.data_begin.year;
 	ss.begin_week = WEEK_ID_BEGIN;
 	ss.end_week = WEEK_ID_END;
+	ss.last_week = INT_MIN;
 	memset(ss.filenames, 0, DB_MAX_WEEKS_PER_YEAR);
 
 	/* build path to sport in database file layout */
-	snprintf(ss.dirname, DB_MAX_PATH, "%s/%s", s->rc.data_dir, s->rc.sport);
-	ss.dirname[DB_MAX_PATH-1] = '\0';
+	snprintf(ss.pathbuf, DB_MAX_PATH, "%s/%s", s->rc.data_dir, s->rc.sport);
+	ss.pathbuf[DB_MAX_PATH-1] = '\0';
 
 	/* make sure the expected dir exists */
-	if (access(ss.dirname, R_OK)) {
+	if (access(ss.pathbuf, R_OK)) {
 		fprintf(stderr, "%s: error reading dir '%s': %s\n",
-			progname, ss.dirname, strerror(errno));
+			progname, ss.pathbuf, strerror(errno));
 		return -1;
 	}
 
